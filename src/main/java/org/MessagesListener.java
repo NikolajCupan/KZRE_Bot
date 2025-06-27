@@ -11,7 +11,12 @@ import java.util.*;
 
 public class MessagesListener extends ListenerAdapter {
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(MessagesListener.class);
-    private static final Map<String, ActionHandler> REGISTERED_ACTION_HANDLERS = new HashMap<>();
+
+    private final Map<String, ActionHandler> registeredActionHandlers;
+
+    public MessagesListener() {
+        this.registeredActionHandlers = new HashMap<>();
+    }
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
@@ -27,7 +32,7 @@ public class MessagesListener extends ListenerAdapter {
         }
 
         Command command = new Command(content);
-        ActionHandler actionHandler = MessagesListener.REGISTERED_ACTION_HANDLERS.get(command.getAction());
+        ActionHandler actionHandler = this.registeredActionHandlers.get(command.getAction());
         if (actionHandler == null) {
             return;
         }
@@ -36,17 +41,17 @@ public class MessagesListener extends ListenerAdapter {
         actionHandler.executeAction(event, command);
     }
 
-    public static void registerActionHandler(ActionHandler actionHandler) {
+    public void registerActionHandler(ActionHandler actionHandler) {
         if (actionHandler.getAction().contains(" ")) {
             MessagesListener.LOGGER.error("Action \"{}\" contains space", actionHandler);
             return;
         }
 
-        if (MessagesListener.REGISTERED_ACTION_HANDLERS.containsKey(actionHandler.getAction())) {
+        if (this.registeredActionHandlers.containsKey(actionHandler.getAction())) {
             MessagesListener.LOGGER.error("Action \"{}\" is already registered", actionHandler);
             return;
         }
 
-        MessagesListener.REGISTERED_ACTION_HANDLERS.put(actionHandler.getAction(), actionHandler);
+        this.registeredActionHandlers.put(actionHandler.getAction(), actionHandler);
     }
 }
