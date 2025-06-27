@@ -3,14 +3,15 @@ package org;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import org.command.CommandHandler;
+import org.action.ActionHandler;
+import org.parser.Command;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 public class MessagesListener extends ListenerAdapter {
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(MessagesListener.class);
-    private static final Map<String, CommandHandler> REGISTERED_COMMAND_HANDLERS = new HashMap<>();
+    private static final Map<String, ActionHandler> REGISTERED_ACTION_HANDLERS = new HashMap<>();
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
@@ -21,32 +22,31 @@ public class MessagesListener extends ListenerAdapter {
         Message message = event.getMessage();
         String content = message.getContentRaw();
 
-        if (!content.startsWith(Constants.COMMAND_PREFIX)) {
+        if (!content.startsWith(Command.ACTION_PREFIX)) {
             return;
         }
 
-        String[] tokens = content.split(" ");
-        String command = tokens[0].substring(1);
-        CommandHandler commandHandler = MessagesListener.REGISTERED_COMMAND_HANDLERS.get(command);
-        if (commandHandler == null) {
+        Command command = new Command(content);
+        ActionHandler actionHandler = MessagesListener.REGISTERED_ACTION_HANDLERS.get(command.getAction());
+        if (actionHandler == null) {
             return;
         }
 
-        MessagesListener.LOGGER.info("Received command \"{}\"", content);
-        commandHandler.executeAction(event);
+        MessagesListener.LOGGER.info("Received action \"{}\"", content);
+        actionHandler.executeAction(event, command);
     }
 
-    public static void registerCommandHandler(CommandHandler commandHandler) {
-        if (commandHandler.getCommand().contains(" ")) {
-            MessagesListener.LOGGER.error("Command \"{}\" contains space", commandHandler);
+    public static void registerActionHandler(ActionHandler actionHandler) {
+        if (actionHandler.getAction().contains(" ")) {
+            MessagesListener.LOGGER.error("Action \"{}\" contains space", actionHandler);
             return;
         }
 
-        if (MessagesListener.REGISTERED_COMMAND_HANDLERS.containsKey(commandHandler.getCommand())) {
-            MessagesListener.LOGGER.error("Command \"{}\" is already registered", commandHandler);
+        if (MessagesListener.REGISTERED_ACTION_HANDLERS.containsKey(actionHandler.getAction())) {
+            MessagesListener.LOGGER.error("Action \"{}\" is already registered", actionHandler);
             return;
         }
 
-        MessagesListener.REGISTERED_COMMAND_HANDLERS.put(commandHandler.getCommand(), commandHandler);
+        MessagesListener.REGISTERED_ACTION_HANDLERS.put(actionHandler.getAction(), actionHandler);
     }
 }

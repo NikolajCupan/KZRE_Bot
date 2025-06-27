@@ -5,7 +5,7 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
-import org.command.Quote;
+import org.action.Quote;
 
 public class Main extends ListenerAdapter {
     public static void main(String[] args) {
@@ -14,6 +14,6 @@ public class Main extends ListenerAdapter {
         JDA api = JDABuilder.createDefault(dotenv.get("TOKEN")).enableIntents(GatewayIntent.MESSAGE_CONTENT).build();
         api.addEventListener(new MessagesListener());
 
-        MessagesListener.registerCommandHandler(new Quote());
+        MessagesListener.registerActionHandler(new Quote());
     }
 }
