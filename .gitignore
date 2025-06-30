@@ -4,3 +4,4 @@ target/
 temporary/
 
 .env
+documentation/database_model.mwb.bak
