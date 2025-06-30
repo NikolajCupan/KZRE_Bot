@@ -26,27 +26,51 @@ public class Command {
         int tokenIndex = 1;
         while (tokenIndex < tokens.length) {
             String token = tokens[tokenIndex];
-            if (!token.startsWith(Command.MODIFIER_PREFIX)) {
+
+            if (!token.startsWith(Command.MODIFIER_PREFIX) || token.length() < 2) {
                 Command.LOGGER.warn("Ignored token \"{}\"", token);
                 ++tokenIndex;
+                continue;
             }
 
             String modifier = token.substring(1);
-            List<String> arguments = new ArrayList<>();
 
-            int argumentIndex = tokenIndex + 1;
-            while (argumentIndex < tokens.length) {
-                String argument = tokens[argumentIndex];
-                if (argument.startsWith(Command.MODIFIER_PREFIX)) {
-                    break;
+            if (!modifier.equals("value")) {
+                List<String> arguments = new ArrayList<>();
+
+                int argumentIndex = tokenIndex + 1;
+                while (argumentIndex < tokens.length) {
+                    String argument = tokens[argumentIndex];
+                    if (argument.startsWith(Command.MODIFIER_PREFIX)) {
+                        break;
+                    }
+
+                    arguments.add(argument);
+                    ++argumentIndex;
                 }
 
-                arguments.add(argument);
-                ++argumentIndex;
-            }
-            this.modifiers.add(new Modifier(modifier, arguments));
+                arguments.removeIf(String::isBlank);
+                this.modifiers.add(new Modifier(modifier, arguments));
 
-            tokenIndex = argumentIndex;
+                tokenIndex = argumentIndex;
+            } else {
+                StringBuilder stringBuilder = new StringBuilder();
+
+                for (++tokenIndex; tokenIndex < tokens.length; ++tokenIndex) {
+                    String argument = tokens[tokenIndex];
+                    stringBuilder.append(argument);
+
+                    if (argument.startsWith("-") && argument.length() > 1) {
+                        Command.LOGGER.warn("Modifier \"{}\" possibly ignored, modifier \"value\" should be last", argument.substring(1));
+                    }
+
+                    if (tokenIndex != tokens.length - 1) {
+                        stringBuilder.append(' ');
+                    }
+                }
+
+                this.modifiers.add(new Modifier(modifier, List.of(stringBuilder.toString())));
+            }
         }
     }
 
