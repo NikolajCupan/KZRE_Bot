@@ -81,7 +81,16 @@ public class ChatCommand {
         return this.chatAction;
     }
 
-    public Helper.TypedValue getArgument(Modifier<? extends Enum<?>> modifier) {
+    public<T extends Enum<T>, U extends Enum<U>> Enum<?> getArgumentAsEnum(Modifier<T, U> modifier) {
+        Helper.TypedValue argument = this.getArgument(modifier);
+        if (argument.getType() != Helper.TypedValue.Type.ENUMERATOR) {
+            throw new RuntimeException("Argument is not enumerator");
+        }
+
+        return Enum.valueOf(modifier.getPossibleArgumentsType(), argument.getValue());
+    }
+
+    public<T extends Enum<T>, U extends Enum<U>> Helper.TypedValue getArgument(Modifier<T, U> modifier) {
         if (!this.chatModifiers.containsKey(modifier.getModifier().toString())) {
             return modifier.getDefaultArgument();
         }
@@ -99,7 +108,7 @@ public class ChatCommand {
         return new Helper.TypedValue(modifier.getChatArgumentType(firstChatArgument), firstChatArgument);
     }
 
-    public List<Helper.TypedValue> getArguments(Modifier<? extends Enum<?>> modifier) {
+    public<T extends Enum<T>, U extends Enum<U>> List<Helper.TypedValue> getArguments(Modifier<T, U> modifier) {
         if (!this.chatModifiers.containsKey(modifier.getModifier().toString())) {
             return List.of(modifier.getDefaultArgument());
         }

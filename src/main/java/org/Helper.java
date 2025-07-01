@@ -12,6 +12,14 @@ public class Helper {
             this.value = value;
         }
 
+        public Type getType() {
+            return this.type;
+        }
+
+        public String getValue() {
+            return this.value;
+        }
+
         @Override
         public String toString() {
             return "[" + this.type.toString() + ": " + this.value + "]";

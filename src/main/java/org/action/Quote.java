@@ -12,18 +12,18 @@ import java.util.Map;
 public class Quote extends ActionHandler {
     private enum ActionModifier { TYPE, TAG, ORDER, COUNT, VALUE }
 
-    private enum TypeArgument { GET, NEW_QUOTE, NEW_TAG }
+    private enum TypeArgument { GET_QUOTE, GET_TAG, NEW_QUOTE, NEW_TAG }
     private enum OrderArgument { RANDOM, NEWEST, OLDEST }
     private enum CountArgument { ALL }
 
     private static final Action action = Action.QUOTE;
-    private static final Map<ActionModifier, Modifier<? extends Enum<?>>> ACTION_MODIFIERS =
+    private static final Map<ActionModifier, Modifier<? extends Enum<?>, ? extends Enum<?>>> ACTION_MODIFIERS =
             new EnumMap<>(ActionModifier.class);
 
     static {
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.TYPE,
-                new Modifier<>(ActionModifier.TYPE, TypeArgument.class, TypeArgument.GET, false, false, false)
+                new Modifier<>(ActionModifier.TYPE, TypeArgument.class, TypeArgument.GET_QUOTE, false, false, false)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.TAG,

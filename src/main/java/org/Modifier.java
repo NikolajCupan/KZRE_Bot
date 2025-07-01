@@ -3,9 +3,11 @@ package org;
 import java.util.HashSet;
 import java.util.Set;
 
-public class Modifier<T extends Enum<?>> {
+public class Modifier<T extends Enum<T>, U extends Enum<U>> {
     private final T modifier;
+
     private final Set<String> possibleArguments;
+    private final Class<U> possibleArgumentsType;
 
     private final String defaultArgument;
     private final Helper.TypedValue.Type defaultArgumentType;
@@ -14,7 +16,7 @@ public class Modifier<T extends Enum<?>> {
     private final boolean argumentCanBeDecimalNumber;
     private final boolean argumentCanBeWholeNumber;
 
-    public <U extends Enum<?>, V> Modifier(
+    public <V> Modifier(
             T modifier,
             Class<U> enumClass,
             V defaultArgument,
@@ -28,6 +30,7 @@ public class Modifier<T extends Enum<?>> {
         for (Enum<?> possibleArgument : enumClass.getEnumConstants()) {
             this.possibleArguments.add(possibleArgument.toString());
         }
+        this.possibleArgumentsType = enumClass;
 
         this.defaultArgument = defaultArgument == null ? "" : String.valueOf(defaultArgument);
         if (defaultArgument == null) {
@@ -49,10 +52,6 @@ public class Modifier<T extends Enum<?>> {
         this.argumentCanBeAnyString = argumentCanBeAnyString;
         this.argumentCanBeDecimalNumber = argumentCanBeDecimalNumber;
         this.argumentCanBeWholeNumber = argumentCanBeWholeNumber;
-    }
-
-    public T getModifier() {
-        return this.modifier;
     }
 
     public Helper.TypedValue getDefaultArgument() {
@@ -81,5 +80,13 @@ public class Modifier<T extends Enum<?>> {
         } else {
             return Helper.TypedValue.Type.STRING;
         }
+    }
+
+    public T getModifier() {
+        return this.modifier;
+    }
+
+    public Class<U> getPossibleArgumentsType() {
+        return this.possibleArgumentsType;
     }
 }
