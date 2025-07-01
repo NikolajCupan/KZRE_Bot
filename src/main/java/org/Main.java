@@ -4,7 +4,6 @@ import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.requests.GatewayIntent;
-import org.action.Quote;
 import org.apache.ibatis.jdbc.ScriptRunner;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -35,9 +34,7 @@ public class Main {
         JDA api = JDABuilder.createDefault(Main.DOTENV.get("TOKEN")).enableIntents(GatewayIntent.MESSAGE_CONTENT)
                 .build();
 
-        MessagesListener messagesListener = new MessagesListener();
-        api.addEventListener(messagesListener);
-        messagesListener.registerActionHandler(new Quote());
+        api.addEventListener(new MessagesListener());
     }
 
     public static void initializeDatabase() {
