@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ChatCommand {
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ChatCommand.class);
@@ -86,7 +87,7 @@ public class ChatCommand {
         }
 
         List<String> chatArguments = this.chatModifiers.get(modifier.getModifier().toString());
-        if (chatArguments.isEmpty() || chatArguments.getFirst().isBlank()) {
+        if (chatArguments.isEmpty()) {
             return modifier.getDefaultArgument();
         }
 
@@ -96,5 +97,20 @@ public class ChatCommand {
         }
 
         return new Helper.TypedValue(modifier.getChatArgumentType(firstChatArgument), firstChatArgument);
+    }
+
+    public List<Helper.TypedValue> getArguments(Modifier<? extends Enum<?>> modifier) {
+        if (!this.chatModifiers.containsKey(modifier.getModifier().toString())) {
+            return List.of(modifier.getDefaultArgument());
+        }
+
+        List<String> chatArguments = this.chatModifiers.get(modifier.getModifier().toString());
+        if (chatArguments.isEmpty()) {
+            return List.of(modifier.getDefaultArgument());
+        }
+
+        return chatArguments.stream()
+                .map(element -> new Helper.TypedValue(modifier.getChatArgumentType(element), element))
+                .collect(Collectors.toList());
     }
 }

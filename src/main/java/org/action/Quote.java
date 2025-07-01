@@ -7,7 +7,6 @@ import org.Modifier;
 import org.parser.ChatCommand;
 
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
 
 public class Quote extends ActionHandler {
@@ -24,23 +23,23 @@ public class Quote extends ActionHandler {
     static {
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.TYPE,
-                new Modifier<>(ActionModifier.TYPE, List.of(TypeArgument.GET, TypeArgument.NEW_QUOTE, TypeArgument.NEW_TAG), TypeArgument.GET, Helper.TypedValue.Type.ENUMERATOR, false, false, false)
+                new Modifier<>(ActionModifier.TYPE, TypeArgument.class, TypeArgument.GET, false, false, false)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.TAG,
-                new Modifier<>(ActionModifier.TAG, List.of(), null, Helper.TypedValue.Type.NULL, true, false, false)
+                new Modifier<>(ActionModifier.TAG, Helper.EmptyEnum.class, null, true, false, false)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.ORDER,
-                new Modifier<>(ActionModifier.ORDER, List.of(OrderArgument.RANDOM, OrderArgument.NEWEST, OrderArgument.OLDEST), OrderArgument.RANDOM, Helper.TypedValue.Type.ENUMERATOR, false, false, false)
+                new Modifier<>(ActionModifier.ORDER, OrderArgument.class, OrderArgument.RANDOM, false, false, false)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.COUNT,
-                new Modifier<>(ActionModifier.COUNT, List.of(CountArgument.ALL), 5, Helper.TypedValue.Type.WHOLE_NUMBER, false, false, true)
+                new Modifier<>(ActionModifier.COUNT, CountArgument.class, 5, false, false, true)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.VALUE,
-                new Modifier<>(ActionModifier.VALUE, List.of(), null, Helper.TypedValue.Type.NULL, true, false, false)
+                new Modifier<>(ActionModifier.VALUE, Helper.EmptyEnum.class, null, true, false, false)
         );
     }
 
@@ -52,13 +51,6 @@ public class Quote extends ActionHandler {
     @Override
     public void executeAction(MessageReceivedEvent event, ChatCommand chatCommand) {
         MessageChannel channel = event.getChannel();
-
-        System.out.println(ActionModifier.TYPE + " " + chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.TYPE)));
-        System.out.println(ActionModifier.TAG + " " + chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.TAG)));
-        System.out.println(ActionModifier.ORDER + " " + chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.ORDER)));
-        System.out.println(ActionModifier.COUNT + " " + chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.COUNT)));
-        System.out.println(ActionModifier.VALUE + " " + chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.VALUE)));
-
         channel.sendMessage("test").queue();
     }
 }

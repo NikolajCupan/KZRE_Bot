@@ -1,8 +1,7 @@
 package org;
 
-import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class Modifier<T extends Enum<?>> {
     private final T modifier;
@@ -17,18 +16,35 @@ public class Modifier<T extends Enum<?>> {
 
     public <U extends Enum<?>, V> Modifier(
             T modifier,
-            List<U> possibleArguments,
+            Class<U> enumClass,
             V defaultArgument,
-            Helper.TypedValue.Type defaultArgumentType,
             boolean argumentCanBeAnyString,
             boolean argumentCanBeDecimalNumber,
             boolean argumentCanBeWholeNumber
     ) {
         this.modifier = modifier;
-        this.possibleArguments = possibleArguments.stream().map(Object::toString).collect(Collectors.toSet());
+
+        this.possibleArguments = new HashSet<>();
+        for (Enum<?> possibleArgument : enumClass.getEnumConstants()) {
+            this.possibleArguments.add(possibleArgument.toString());
+        }
 
         this.defaultArgument = defaultArgument == null ? "" : String.valueOf(defaultArgument);
-        this.defaultArgumentType = defaultArgumentType;
+        if (defaultArgument == null) {
+            this.defaultArgumentType = Helper.TypedValue.Type.NULL;
+        } else if (defaultArgument instanceof Enum<?>) {
+            if (!Helper.enumeratorIsFromEnum(enumClass, (Enum<?>)defaultArgument)) {
+                throw new IllegalArgumentException("If default argument is an enumerator, it must be from the possible arguments enum");
+            }
+
+            this.defaultArgumentType = Helper.TypedValue.Type.ENUMERATOR;
+        } else if (Helper.isWholeNumber(defaultArgument)) {
+            this.defaultArgumentType = Helper.TypedValue.Type.WHOLE_NUMBER;
+        } else if (Helper.isDecimalNumber(defaultArgument)) {
+            this.defaultArgumentType = Helper.TypedValue.Type.DECIMAL_NUMBER;
+        } else {
+            this.defaultArgumentType = Helper.TypedValue.Type.STRING;
+        }
 
         this.argumentCanBeAnyString = argumentCanBeAnyString;
         this.argumentCanBeDecimalNumber = argumentCanBeDecimalNumber;

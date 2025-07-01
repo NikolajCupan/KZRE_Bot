@@ -18,18 +18,30 @@ public class Helper {
         }
     }
 
-    public static boolean isDecimalNumber(String string) {
+    public enum EmptyEnum {}
+
+    public static<T extends Enum<?>, U extends Enum<?>> boolean enumeratorIsFromEnum(Class<T> enumClass, U testedEnumerator) {
+        for (Enum<?> enumerator : enumClass.getEnumConstants()) {
+            if (enumerator.name().equals(testedEnumerator.name())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static<T> boolean isDecimalNumber(T testedValue) {
         try {
-            Double.parseDouble(string);
+            Double.parseDouble(testedValue.toString());
             return true;
         } catch (NumberFormatException exception) {
             return false;
         }
     }
 
-    public static boolean isWholeNumber(String string) {
+    public static<T> boolean isWholeNumber(T testedValue) {
         try {
-            Integer.parseInt(string);
+            Integer.parseInt(testedValue.toString());
             return true;
         } catch (NumberFormatException exception) {
             return false;
