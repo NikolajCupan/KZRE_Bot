@@ -2,9 +2,7 @@ package org;
 
 public class Helper {
     public static class TypedValue {
-        public enum Type {
-            STRING, WHOLE_NUMBER, DECIMAL_NUMBER, NULL
-        }
+        public enum Type { STRING, WHOLE_NUMBER, DECIMAL_NUMBER, ENUMERATOR, NULL }
 
         private final Type type;
         private final String value;

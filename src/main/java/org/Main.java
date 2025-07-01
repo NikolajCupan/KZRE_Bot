@@ -24,14 +24,17 @@ public class Main {
         Main.DOTENV = Dotenv.load();
 
         Configuration configuration = new Configuration().configure("hibernate.cfg.xml");
-        configuration.setProperty("hibernate.hikari.dataSource.url", MessageFormat.format("jdbc:mysql://{0}:{1}/{2}",
-                Main.DOTENV.get("DATABASE_HOST"), Main.DOTENV.get("DATABASE_PORT"), Main.DOTENV.get("DATABASE_NAME")));
+        configuration.setProperty(
+                "hibernate.hikari.dataSource.url",
+                MessageFormat.format("jdbc:mysql://{0}:{1}/{2}", Main.DOTENV.get("DATABASE_HOST"), Main.DOTENV.get("DATABASE_PORT"), Main.DOTENV.get("DATABASE_NAME"))
+        );
         configuration.setProperty("hibernate.hikari.dataSource.user", Main.DOTENV.get("DATABASE_USER"));
         configuration.setProperty("hibernate.hikari.dataSource.password", Main.DOTENV.get("DATABASE_PASSWORD"));
         Main.DATABASE_SESSION_FACTORY = configuration.buildSessionFactory();
         Main.initializeDatabase();
 
-        JDA api = JDABuilder.createDefault(Main.DOTENV.get("TOKEN")).enableIntents(GatewayIntent.MESSAGE_CONTENT)
+        JDA api = JDABuilder.createDefault(Main.DOTENV.get("TOKEN"))
+                .enableIntents(GatewayIntent.MESSAGE_CONTENT)
                 .build();
 
         api.addEventListener(new MessagesListener());

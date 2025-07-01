@@ -1,10 +1,12 @@
 package org;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Modifier<T extends Enum<?>> {
     private final T modifier;
-    private final List<String> possibleArguments;
+    private final Set<String> possibleArguments;
 
     private final String defaultArgument;
     private final Helper.TypedValue.Type defaultArgumentType;
@@ -13,11 +15,17 @@ public class Modifier<T extends Enum<?>> {
     private final boolean argumentCanBeDecimalNumber;
     private final boolean argumentCanBeWholeNumber;
 
-    public <U> Modifier(T modifier, List<String> possibleArguments, U defaultArgument,
-            Helper.TypedValue.Type defaultArgumentType, boolean argumentCanBeAnyString,
-            boolean argumentCanBeDecimalNumber, boolean argumentCanBeWholeNumber) {
+    public <U extends Enum<?>, V> Modifier(
+            T modifier,
+            List<U> possibleArguments,
+            V defaultArgument,
+            Helper.TypedValue.Type defaultArgumentType,
+            boolean argumentCanBeAnyString,
+            boolean argumentCanBeDecimalNumber,
+            boolean argumentCanBeWholeNumber
+    ) {
         this.modifier = modifier;
-        this.possibleArguments = possibleArguments;
+        this.possibleArguments = possibleArguments.stream().map(Object::toString).collect(Collectors.toSet());
 
         this.defaultArgument = defaultArgument == null ? "" : String.valueOf(defaultArgument);
         this.defaultArgumentType = defaultArgumentType;
@@ -32,7 +40,7 @@ public class Modifier<T extends Enum<?>> {
     }
 
     public Helper.TypedValue getDefaultArgument() {
-        return new Helper.TypedValue(this.defaultArgumentType, String.valueOf(this.defaultArgument));
+        return new Helper.TypedValue(this.defaultArgumentType, this.defaultArgument);
     }
 
     public boolean isPossibleArgument(String chatArgument) {
@@ -48,7 +56,9 @@ public class Modifier<T extends Enum<?>> {
     }
 
     public Helper.TypedValue.Type getChatArgumentType(String chatArgument) {
-        if (this.argumentCanBeWholeNumber && Helper.isWholeNumber(chatArgument)) {
+        if (this.possibleArguments.contains(chatArgument)) {
+            return Helper.TypedValue.Type.ENUMERATOR;
+        } else if (this.argumentCanBeWholeNumber && Helper.isWholeNumber(chatArgument)) {
             return Helper.TypedValue.Type.WHOLE_NUMBER;
         } else if (this.argumentCanBeDecimalNumber && Helper.isDecimalNumber(chatArgument)) {
             return Helper.TypedValue.Type.DECIMAL_NUMBER;
