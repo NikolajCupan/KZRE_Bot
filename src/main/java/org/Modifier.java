@@ -7,7 +7,6 @@ public class Modifier<T extends Enum<T>, U extends Enum<U>> {
     private final T modifier;
 
     private final Set<String> possibleArguments;
-    private final Class<U> possibleArgumentsType;
 
     private final String defaultArgument;
     private final Helper.TypedValue.Type defaultArgumentType;
@@ -27,10 +26,9 @@ public class Modifier<T extends Enum<T>, U extends Enum<U>> {
         this.modifier = modifier;
 
         this.possibleArguments = new HashSet<>();
-        for (Enum<?> possibleArgument : enumClass.getEnumConstants()) {
+        for (Enum<U> possibleArgument : enumClass.getEnumConstants()) {
             this.possibleArguments.add(possibleArgument.toString());
         }
-        this.possibleArgumentsType = enumClass;
 
         this.defaultArgument = defaultArgument == null ? "" : String.valueOf(defaultArgument);
         if (defaultArgument == null) {
@@ -84,9 +82,5 @@ public class Modifier<T extends Enum<T>, U extends Enum<U>> {
 
     public T getModifier() {
         return this.modifier;
-    }
-
-    public Class<U> getPossibleArgumentsType() {
-        return this.possibleArgumentsType;
     }
 }

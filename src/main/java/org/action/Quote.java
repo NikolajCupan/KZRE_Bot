@@ -51,6 +51,9 @@ public class Quote extends ActionHandler {
     @Override
     public void executeAction(MessageReceivedEvent event, ChatCommand chatCommand) {
         MessageChannel channel = event.getChannel();
+
+        TypeArgument a = chatCommand.getArgumentAsEnum(Quote.ACTION_MODIFIERS.get(ActionModifier.TYPE), TypeArgument.class);
+
         channel.sendMessage("test").queue();
     }
 }

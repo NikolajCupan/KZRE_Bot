@@ -9,18 +9,22 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.cfg.Configuration;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.FileReader;
 import java.text.MessageFormat;
+import java.util.*;
 
 public class Main {
-    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(Main.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
 
+    public static List<String> COMMAND_LINE_ARGUMENTS;
     public static Dotenv DOTENV;
     public static SessionFactory DATABASE_SESSION_FACTORY;
 
     public static void main(String[] args) {
+        Main.parseCommandLineArguments(args);
         Main.DOTENV = Dotenv.load();
 
         Configuration configuration = new Configuration().configure("hibernate.cfg.xml");
@@ -38,6 +42,11 @@ public class Main {
                 .build();
 
         api.addEventListener(new MessagesListener());
+    }
+
+    public static void parseCommandLineArguments(String[] arguments) {
+        Main.COMMAND_LINE_ARGUMENTS = new ArrayList<>();
+        Collections.addAll(Main.COMMAND_LINE_ARGUMENTS, arguments);
     }
 
     public static void initializeDatabase() {

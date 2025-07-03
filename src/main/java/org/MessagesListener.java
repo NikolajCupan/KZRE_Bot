@@ -6,13 +6,15 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.action.Action;
 import org.action.ActionHandler;
 import org.action.Quote;
+import org.jetbrains.annotations.NotNull;
 import org.parser.ChatCommand;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 public class MessagesListener extends ListenerAdapter {
-    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(MessagesListener.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MessagesListener.class);
     private static final Map<String, ActionHandler> REGISTERED_ACTION_HANDLERS = new HashMap<>();;
 
     static {
@@ -20,7 +22,12 @@ public class MessagesListener extends ListenerAdapter {
     }
 
     @Override
-    public void onMessageReceived(MessageReceivedEvent event) {
+    public void onMessageReceived(@NotNull MessageReceivedEvent event) {
+        if (Main.COMMAND_LINE_ARGUMENTS.contains(Constants.DEVELOPMENT_ARGUMENT)
+                && !event.getGuild().getId().equals("949756585616474152")) {
+            return;
+        }
+
         if (event.getAuthor().isBot()) {
             return;
         }

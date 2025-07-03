@@ -2,6 +2,7 @@ package org.parser;
 
 import org.Helper;
 import org.Modifier;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
@@ -11,7 +12,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ChatCommand {
-    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ChatCommand.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChatCommand.class);
 
     public static final String ACTION_PREFIX = "!";
     public static final String MODIFIER_PREFIX = "-";
@@ -81,13 +82,13 @@ public class ChatCommand {
         return this.chatAction;
     }
 
-    public<T extends Enum<T>, U extends Enum<U>> Enum<?> getArgumentAsEnum(Modifier<T, U> modifier) {
+    public<T extends Enum<T>, U extends Enum<U>, V extends Enum<V>> V getArgumentAsEnum(Modifier<T, U> modifier, Class<V> requiredType) {
         Helper.TypedValue argument = this.getArgument(modifier);
         if (argument.getType() != Helper.TypedValue.Type.ENUMERATOR) {
             throw new RuntimeException("Argument is not enumerator");
         }
 
-        return Enum.valueOf(modifier.getPossibleArgumentsType(), argument.getValue());
+        return requiredType.cast(Enum.valueOf(requiredType, argument.getValue()));
     }
 
     public<T extends Enum<T>, U extends Enum<U>> Helper.TypedValue getArgument(Modifier<T, U> modifier) {
