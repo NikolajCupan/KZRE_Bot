@@ -15,7 +15,8 @@ import java.util.*;
 
 public class MessagesListener extends ListenerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessagesListener.class);
-    private static final Map<String, ActionHandler> REGISTERED_ACTION_HANDLERS = new HashMap<>();;
+    private static final Map<String, ActionHandler> REGISTERED_ACTION_HANDLERS = new HashMap<>();
+    private static final UserHandler USER_HANDLER = new UserHandler();
 
     static {
         MessagesListener.REGISTERED_ACTION_HANDLERS.put(Action.QUOTE.toString(), new Quote());
@@ -34,7 +35,6 @@ public class MessagesListener extends ListenerAdapter {
 
         Message message = event.getMessage();
         String content = message.getContentRaw();
-
         if (!content.startsWith(ChatCommand.ACTION_PREFIX)) {
             return;
         }
@@ -46,6 +46,7 @@ public class MessagesListener extends ListenerAdapter {
         }
 
         MessagesListener.LOGGER.info("Received action \"{}\"", content);
+        MessagesListener.USER_HANDLER.refreshUser(event);
         actionHandler.executeAction(event, chatCommand);
     }
 }

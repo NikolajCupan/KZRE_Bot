@@ -1,15 +1,22 @@
 package org.action;
 
-import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.Helper;
+import org.Main;
 import org.Modifier;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.parser.ChatCommand;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.text.MessageFormat;
 import java.util.EnumMap;
 import java.util.Map;
 
 public class Quote extends ActionHandler {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Quote.class);
+
     private enum ActionModifier { TYPE, TAG, ORDER, COUNT, VALUE }
 
     private enum TypeArgument { GET_QUOTE, GET_TAG, NEW_QUOTE, NEW_TAG }
@@ -50,10 +57,38 @@ public class Quote extends ActionHandler {
 
     @Override
     public void executeAction(MessageReceivedEvent event, ChatCommand chatCommand) {
-        MessageChannel channel = event.getChannel();
+        TypeArgument typeArgument = chatCommand.getArgumentAsEnum(Quote.ACTION_MODIFIERS.get(ActionModifier.TYPE), TypeArgument.class);
+        try {
+            switch (typeArgument) {
+                case GET_QUOTE -> this.handleGetQuote(event, chatCommand);
+                case GET_TAG -> this.handleGetTag(event, chatCommand);
+                case NEW_QUOTE -> this.handleNewQuote(event, chatCommand);
+                case NEW_TAG -> this.handleNewTag(event, chatCommand);
+            }
+        } catch (Exception exception) {
+            Quote.LOGGER.error(exception.getMessage());
+        }
+    }
 
-        TypeArgument a = chatCommand.getArgumentAsEnum(Quote.ACTION_MODIFIERS.get(ActionModifier.TYPE), TypeArgument.class);
+    private void handleGetQuote(MessageReceivedEvent event, ChatCommand chatCommand) {
+    }
 
-        channel.sendMessage("test").queue();
+    private void handleGetTag(MessageReceivedEvent event, ChatCommand chatCommand) {
+    }
+
+    private void handleNewQuote(MessageReceivedEvent event, ChatCommand chatCommand) {
+    }
+
+    private void handleNewTag(MessageReceivedEvent event, ChatCommand chatCommand) {
+        Helper.TypedValue newTag = chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.VALUE));
+        Helper.failIfBlank(newTag.getValue(), MessageFormat.format("Argument of \"{0}\" modifier was not found", ActionModifier.VALUE));
+
+        Session session = Main.DATABASE_SESSION_FACTORY.openSession();
+        Transaction transaction = session.beginTransaction();
+
+
+
+        transaction.commit();
+        session.close();
     }
 }

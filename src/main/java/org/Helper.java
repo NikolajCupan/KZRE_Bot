@@ -55,4 +55,10 @@ public class Helper {
             return false;
         }
     }
+
+    public static void failIfBlank(String value, String message) {
+        if (value.isBlank()) {
+            throw new IllegalArgumentException(message);
+        }
+    }
 }
