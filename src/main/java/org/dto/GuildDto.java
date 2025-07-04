@@ -20,21 +20,21 @@ public class GuildDto {
         this.snowflakeGuild = snowflakeGuild;
     }
 
-    public static GuildDto getGuild(Session session, String snowflake) {
+    public static GuildDto getGuild(Session session, String snowflakeGuild) {
         String sql = "SELECT * FROM " + GuildDto.GUILD_TABLE_NAME + " WHERE "
-                + GuildDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflake";
+                + GuildDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild";
 
         return session.createNativeQuery(sql, GuildDto.class)
-                .setParameter("p_snowflake", snowflake)
+                .setParameter("p_snowflakeGuild", snowflakeGuild)
                 .getSingleResultOrNull();
     }
 
-    public static boolean guildExists(Session session, String snowflake) {
+    public static boolean guildExists(Session session, String snowflakeGuild) {
         String sql = "SELECT * FROM " + GuildDto.GUILD_TABLE_NAME + " WHERE "
-                + GuildDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflake";
+                + GuildDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild";
 
         return !session.createNativeQuery(sql, GuildDto.class)
-                .setParameter("p_snowflake", snowflake)
+                .setParameter("p_snowflakeGuild", snowflakeGuild)
                 .getResultList()
                 .isEmpty();
     }

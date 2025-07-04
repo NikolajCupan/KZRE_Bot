@@ -1,16 +1,12 @@
 package org;
 
+import org.exception.InvalidArgumentException;
+import org.exception.MissingArgumentException;
 import org.jetbrains.annotations.NotNull;
 
 public class Helper {
     public record TypedValue(Helper.TypedValue.Type type, String value) {
         public enum Type { STRING, WHOLE_NUMBER, DECIMAL_NUMBER, ENUMERATOR, NULL }
-
-        @NotNull
-        @Override
-        public String toString() {
-            return "[" + this.type.toString() + ": " + this.value + "]";
-        }
 
         public String valueFirstWord() {
             if (this.value.isBlank()) {
@@ -23,6 +19,12 @@ public class Helper {
             }
 
             return this.value.substring(0, spaceIndex);
+        }
+
+        @NotNull
+        @Override
+        public String toString() {
+            return "[" + this.type.toString() + ": " + this.value + "]";
         }
     }
 
@@ -58,7 +60,17 @@ public class Helper {
 
     public static void failIfBlank(String value, String message) {
         if (value.isBlank()) {
-            throw new IllegalArgumentException(message);
+            throw new MissingArgumentException(message);
+        }
+    }
+
+    public static void failIfOutOfRange(long value, long minInclusive, long maxInclusive, String message) {
+        if (minInclusive > maxInclusive) {
+            throw new IllegalArgumentException("Min value must be lower or equal to max value");
+        }
+
+        if (value < minInclusive || value > maxInclusive) {
+            throw new InvalidArgumentException(message);
         }
     }
 }

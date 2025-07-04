@@ -20,21 +20,21 @@ public class UserDto {
         this.snowflakeUser = snowflakeUser;
     }
 
-    public static UserDto getUser(Session session, String snowflake) {
+    public static UserDto getUser(Session session, String snowflakeUser) {
         String sql = "SELECT * FROM " + UserDto.USER_TABLE_NAME + " WHERE "
-                + UserDto.SNOWFLAKE_USER_COLUMN_NAME + " = :p_snowflake";
+                + UserDto.SNOWFLAKE_USER_COLUMN_NAME + " = :p_snowflakeUser";
 
         return session.createNativeQuery(sql, UserDto.class)
-                .setParameter("p_snowflake", snowflake)
+                .setParameter("p_snowflakeUser", snowflakeUser)
                 .getSingleResultOrNull();
     }
 
-    public static boolean userExists(Session session, String snowflake) {
+    public static boolean userExists(Session session, String snowflakeUser) {
         String sql = "SELECT * FROM " + UserDto.USER_TABLE_NAME + " WHERE "
-                + UserDto.SNOWFLAKE_USER_COLUMN_NAME + " = :p_snowflake";
+                + UserDto.SNOWFLAKE_USER_COLUMN_NAME + " = :p_snowflakeUser";
 
         return !session.createNativeQuery(sql, UserDto.class)
-                .setParameter("p_snowflake", snowflake)
+                .setParameter("p_snowflakeUser", snowflakeUser)
                 .getResultList()
                 .isEmpty();
     }

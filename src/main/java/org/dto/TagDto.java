@@ -48,4 +48,8 @@ public class TagDto {
         this.snowflakeGuild = snowflakeGuild;
         this.tag = tag;
     }
+
+    public String getTag() {
+        return this.tag;
+    }
 }

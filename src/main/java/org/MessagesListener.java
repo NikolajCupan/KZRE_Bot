@@ -67,7 +67,7 @@ public class MessagesListener extends ListenerAdapter {
                     embedBuilder.addField(ProcessingContext.MessageType.ERROR.toString(), element.message(), false)
             );
         } else {
-            processingContext.getMessages(List.of(ProcessingContext.MessageType.WARNING, ProcessingContext.MessageType.SUCCESS)).forEach(element ->
+            processingContext.getMessages(List.of(ProcessingContext.MessageType.RESULT, ProcessingContext.MessageType.SUCCESS, ProcessingContext.MessageType.WARNING)).forEach(element ->
                     embedBuilder.addField(element.messageType().toString(), element.message(), false)
             );
         }

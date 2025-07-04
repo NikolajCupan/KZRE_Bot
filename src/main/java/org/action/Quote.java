@@ -6,6 +6,7 @@ import org.Main;
 import org.Modifier;
 import org.ProcessingContext;
 import org.dto.TagDto;
+import org.exception.CustomException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.exception.ConstraintViolationException;
@@ -15,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.text.MessageFormat;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
 public class Quote extends ActionHandler {
@@ -61,11 +63,15 @@ public class Quote extends ActionHandler {
     @Override
     public void executeAction(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         TypeArgument typeArgument = chatCommand.getArgumentAsEnum(Quote.ACTION_MODIFIERS.get(ActionModifier.TYPE), TypeArgument.class);
-        switch (typeArgument) {
-            case GET_QUOTE -> this.handleGetQuote(event, chatCommand, processingContext);
-            case GET_TAG -> this.handleGetTag(event, chatCommand, processingContext);
-            case NEW_QUOTE -> this.handleNewQuote(event, chatCommand, processingContext);
-            case NEW_TAG -> this.handleNewTag(event, chatCommand, processingContext);
+        try {
+            switch (typeArgument) {
+                case TypeArgument.GET_QUOTE -> this.handleGetQuote(event, chatCommand, processingContext);
+                case TypeArgument.GET_TAG -> this.handleGetTag(event, chatCommand, processingContext);
+                case TypeArgument.NEW_QUOTE -> this.handleNewQuote(event, chatCommand, processingContext);
+                case TypeArgument.NEW_TAG -> this.handleNewTag(event, chatCommand, processingContext);
+            }
+        } catch (CustomException exception) {
+            processingContext.addMessages(exception.getMessage(), ProcessingContext.MessageType.ERROR);
         }
     }
 
@@ -73,6 +79,50 @@ public class Quote extends ActionHandler {
     }
 
     private void handleGetTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
+        OrderArgument chatOrder = chatCommand.getArgumentAsEnum(Quote.ACTION_MODIFIERS.get(ActionModifier.ORDER), OrderArgument.class);
+        Helper.TypedValue chatCount = chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.COUNT));
+
+        long resultsCount = Long.MAX_VALUE;
+        if (chatCount.type() == Helper.TypedValue.Type.WHOLE_NUMBER) {
+            resultsCount = Long.parseLong(chatCount.value());
+        }
+
+        Helper.failIfOutOfRange(resultsCount, 0, Long.MAX_VALUE, MessageFormat.format(
+                "Argument for modifier \"{0}\" cannot be negative", ActionModifier.COUNT
+        ));
+
+
+        Session session = Main.DATABASE_SESSION_FACTORY.openSession();
+        Transaction transaction = session.beginTransaction();
+
+        try {
+            String sqlOrder = "";
+            switch (chatOrder) {
+                case OrderArgument.RANDOM -> sqlOrder = "rand()";
+                case OrderArgument.NEWEST -> sqlOrder = TagDto.DATE_MODIFIED_COLUMN_NAME + " desc";
+                case OrderArgument.OLDEST -> sqlOrder = TagDto.DATE_MODIFIED_COLUMN_NAME + " asc";
+            }
+
+            String sql = "SELECT * FROM " + TagDto.TAG_TABLE_NAME + " WHERE "
+                    + TagDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild ORDER BY "
+                    + sqlOrder + " LIMIT :p_resultsCount";
+
+            List<TagDto> tags = session.createNativeQuery(sql, TagDto.class)
+                    .setParameter("p_snowflakeGuild", event.getMessage().getGuild().getId())
+                    .setParameter("p_resultsCount", resultsCount)
+                    .getResultList();
+
+            if (tags.isEmpty()) {
+                processingContext.addMessages("No tags found", ProcessingContext.MessageType.WARNING);
+            } else {
+                StringBuilder stringBuilder = new StringBuilder();
+                tags.forEach(tag -> stringBuilder.append(tag.getTag()).append(' '));
+                processingContext.addMessages(stringBuilder.toString(), ProcessingContext.MessageType.RESULT);
+            }
+        } finally {
+            transaction.commit();
+            session.close();
+        }
     }
 
     private void handleNewQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
@@ -80,7 +130,7 @@ public class Quote extends ActionHandler {
 
     private void handleNewTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         Helper.TypedValue chatNewTag = chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.VALUE));
-        Helper.failIfBlank(chatNewTag.value(), MessageFormat.format("Argument of \"{0}\" modifier was not found", ActionModifier.VALUE));
+        Helper.failIfBlank(chatNewTag.value(), MessageFormat.format("Argument for modifier \"{0}\" was not found", ActionModifier.VALUE));
 
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
