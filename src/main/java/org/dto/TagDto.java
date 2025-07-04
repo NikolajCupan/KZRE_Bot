@@ -2,6 +2,8 @@ package org.dto;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(
         name = TagDto.TAG_TABLE_NAME,
@@ -16,6 +18,8 @@ public class TagDto {
     public static final String SNOWFLAKE_AUTHOR_COLUMN_NAME = "snowflake_author";
     public static final String SNOWFLAKE_GUILD_COLUMN_NAME = "snowflake_guild";
     public static final String TAG_COLUMN_NAME = "tag";
+    public static final String DATE_CREATED_COLUMN_NAME = "date_created";
+    public static final String DATE_MODIFIED_COLUMN_NAME = "date_modified";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,6 +34,12 @@ public class TagDto {
 
     @Column(name = TagDto.TAG_COLUMN_NAME, nullable = false)
     private String tag;
+
+    @Column(name = TagDto.DATE_CREATED_COLUMN_NAME, nullable = false, insertable = false, updatable = false)
+    private LocalDateTime dateCreated;
+
+    @Column(name = TagDto.DATE_MODIFIED_COLUMN_NAME, nullable = false, insertable = false)
+    private LocalDateTime dateModified;
 
     public TagDto() {}
 

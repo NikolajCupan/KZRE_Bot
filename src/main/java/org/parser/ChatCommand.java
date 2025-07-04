@@ -84,11 +84,11 @@ public class ChatCommand {
 
     public<T extends Enum<T>, U extends Enum<U>, V extends Enum<V>> V getArgumentAsEnum(Modifier<T, U> modifier, Class<V> requiredType) {
         Helper.TypedValue argument = this.getArgument(modifier);
-        if (argument.getType() != Helper.TypedValue.Type.ENUMERATOR) {
+        if (argument.type() != Helper.TypedValue.Type.ENUMERATOR) {
             throw new RuntimeException("Argument is not enumerator");
         }
 
-        return requiredType.cast(Enum.valueOf(requiredType, argument.getValue()));
+        return requiredType.cast(Enum.valueOf(requiredType, argument.value()));
     }
 
     public<T extends Enum<T>, U extends Enum<U>> Helper.TypedValue getArgument(Modifier<T, U> modifier) {

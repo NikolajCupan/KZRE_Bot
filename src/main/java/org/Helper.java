@@ -1,28 +1,28 @@
 package org;
 
+import org.jetbrains.annotations.NotNull;
+
 public class Helper {
-    public static class TypedValue {
+    public record TypedValue(Helper.TypedValue.Type type, String value) {
         public enum Type { STRING, WHOLE_NUMBER, DECIMAL_NUMBER, ENUMERATOR, NULL }
 
-        private final Type type;
-        private final String value;
-
-        public TypedValue(Type type, String value) {
-            this.type = type;
-            this.value = value;
-        }
-
-        public Type getType() {
-            return this.type;
-        }
-
-        public String getValue() {
-            return this.value;
-        }
-
+        @NotNull
         @Override
         public String toString() {
             return "[" + this.type.toString() + ": " + this.value + "]";
+        }
+
+        public String valueFirstWord() {
+            if (this.value.isBlank()) {
+                return "";
+            }
+
+            int spaceIndex = this.value.indexOf(' ');
+            if (spaceIndex == -1) {
+                return this.value;
+            }
+
+            return this.value.substring(0, spaceIndex);
         }
     }
 

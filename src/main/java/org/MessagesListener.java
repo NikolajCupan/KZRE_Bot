@@ -1,5 +1,6 @@
 package org;
 
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -12,7 +13,9 @@ import org.parser.ChatCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.util.*;
+import java.util.List;
 
 public class MessagesListener extends ListenerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessagesListener.class);
@@ -53,6 +56,22 @@ public class MessagesListener extends ListenerAdapter {
         MessagesListener.USER_MANAGER.refreshUser(event);
         MessagesListener.GUILD_MANAGER.refreshGuild(event);
 
-        actionHandler.executeAction(event, chatCommand);
+        ProcessingContext processingContext = new ProcessingContext();
+        actionHandler.executeAction(event, chatCommand, processingContext);
+
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+        embedBuilder.setColor(Color.BLACK);
+
+        if (processingContext.hasErrorMessage()) {
+            processingContext.getMessages(List.of(ProcessingContext.MessageType.ERROR)).forEach(element ->
+                    embedBuilder.addField(ProcessingContext.MessageType.ERROR.toString(), element.message(), false)
+            );
+        } else {
+            processingContext.getMessages(List.of(ProcessingContext.MessageType.WARNING, ProcessingContext.MessageType.SUCCESS)).forEach(element ->
+                    embedBuilder.addField(element.messageType().toString(), element.message(), false)
+            );
+        }
+
+        event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
     }
 }

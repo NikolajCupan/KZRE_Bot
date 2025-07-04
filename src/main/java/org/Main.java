@@ -27,6 +27,8 @@ public class Main {
         Main.parseCommandLineArguments(args);
         Main.DOTENV = Dotenv.load();
 
+        TimeZone.setDefault(TimeZone.getTimeZone(Main.DOTENV.get("TIME_ZONE")));
+
         Configuration configuration = new Configuration().configure("hibernate.cfg.xml");
         configuration.setProperty(
                 "hibernate.hikari.dataSource.url",
@@ -61,8 +63,8 @@ public class Main {
 
                 try {
                     scriptRunner.runScript(new FileReader(Constants.RESOURCES_PATH.resolve("schema.sql").toString()));
-                } catch (Exception ignore) {
-                    Main.LOGGER.error("Could not run database initialization script");
+                } catch (Exception exception) {
+                    Main.LOGGER.error("Could not run database initialization script: \"{}\"", exception.getMessage());
                 }
             });
         } finally {

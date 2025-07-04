@@ -4,9 +4,11 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.Helper;
 import org.Main;
 import org.Modifier;
+import org.ProcessingContext;
 import org.dto.TagDto;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.hibernate.exception.ConstraintViolationException;
 import org.parser.ChatCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,40 +59,54 @@ public class Quote extends ActionHandler {
     }
 
     @Override
-    public void executeAction(MessageReceivedEvent event, ChatCommand chatCommand) {
+    public void executeAction(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         TypeArgument typeArgument = chatCommand.getArgumentAsEnum(Quote.ACTION_MODIFIERS.get(ActionModifier.TYPE), TypeArgument.class);
-        try {
-            switch (typeArgument) {
-                case GET_QUOTE -> this.handleGetQuote(event, chatCommand);
-                case GET_TAG -> this.handleGetTag(event, chatCommand);
-                case NEW_QUOTE -> this.handleNewQuote(event, chatCommand);
-                case NEW_TAG -> this.handleNewTag(event, chatCommand);
-            }
-        } catch (Exception exception) {
-            Quote.LOGGER.error(exception.getMessage());
+        switch (typeArgument) {
+            case GET_QUOTE -> this.handleGetQuote(event, chatCommand, processingContext);
+            case GET_TAG -> this.handleGetTag(event, chatCommand, processingContext);
+            case NEW_QUOTE -> this.handleNewQuote(event, chatCommand, processingContext);
+            case NEW_TAG -> this.handleNewTag(event, chatCommand, processingContext);
         }
     }
 
-    private void handleGetQuote(MessageReceivedEvent event, ChatCommand chatCommand) {
+    private void handleGetQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
     }
 
-    private void handleGetTag(MessageReceivedEvent event, ChatCommand chatCommand) {
+    private void handleGetTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
     }
 
-    private void handleNewQuote(MessageReceivedEvent event, ChatCommand chatCommand) {
+    private void handleNewQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
     }
 
-    private void handleNewTag(MessageReceivedEvent event, ChatCommand chatCommand) {
+    private void handleNewTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         Helper.TypedValue chatNewTag = chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.VALUE));
-        Helper.failIfBlank(chatNewTag.getValue(), MessageFormat.format("Argument of \"{0}\" modifier was not found", ActionModifier.VALUE));
+        Helper.failIfBlank(chatNewTag.value(), MessageFormat.format("Argument of \"{0}\" modifier was not found", ActionModifier.VALUE));
 
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
 
+        String chatNewTagFirstWord = chatNewTag.valueFirstWord();
         try {
-            TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewTag.getValue());
+            if (!chatNewTagFirstWord.equals(chatNewTag.value())) {
+                processingContext.addMessages(
+                        MessageFormat.format("Argument for modifier \"{0}\" should not contain spaces, everything after first word was ignored", ActionModifier.VALUE),
+                        ProcessingContext.MessageType.WARNING
+                );
+            }
+
+            TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewTagFirstWord);
             session.persist(newTag);
+
+            processingContext.addMessages(
+                    MessageFormat.format("New tag \"{0}\" was successfully created", chatNewTagFirstWord),
+                    ProcessingContext.MessageType.SUCCESS
+            );
+        } catch (ConstraintViolationException exception) {
+            processingContext.addMessages(
+                    MessageFormat.format("Tag \"{0}\" already exists", chatNewTagFirstWord),
+                    ProcessingContext.MessageType.ERROR
+            );
         } finally {
             transaction.commit();
             session.close();
