@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.Helper;
 import org.Main;
 import org.Modifier;
+import org.dto.TagDto;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.parser.ChatCommand;
@@ -80,15 +81,19 @@ public class Quote extends ActionHandler {
     }
 
     private void handleNewTag(MessageReceivedEvent event, ChatCommand chatCommand) {
-        Helper.TypedValue newTag = chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.VALUE));
-        Helper.failIfBlank(newTag.getValue(), MessageFormat.format("Argument of \"{0}\" modifier was not found", ActionModifier.VALUE));
+        Helper.TypedValue chatNewTag = chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.VALUE));
+        Helper.failIfBlank(chatNewTag.getValue(), MessageFormat.format("Argument of \"{0}\" modifier was not found", ActionModifier.VALUE));
+
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
 
-
-
-        transaction.commit();
-        session.close();
+        try {
+            TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewTag.getValue());
+            session.persist(newTag);
+        } finally {
+            transaction.commit();
+            session.close();
+        }
     }
 }

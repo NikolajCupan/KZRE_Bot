@@ -53,19 +53,21 @@ public class Main {
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
 
-        session.doWork(connection -> {
-            ScriptRunner scriptRunner = new ScriptRunner(connection);
-            scriptRunner.setSendFullScript(false);
-            scriptRunner.setStopOnError(true);
+        try {
+            session.doWork(connection -> {
+                ScriptRunner scriptRunner = new ScriptRunner(connection);
+                scriptRunner.setSendFullScript(false);
+                scriptRunner.setStopOnError(true);
 
-            try {
-                scriptRunner.runScript(new FileReader(Constants.RESOURCES_PATH.resolve("schema.sql").toString()));
-            } catch (Exception ignore) {
-                Main.LOGGER.error("Could not run database initialization script");
-            }
-        });
-
-        transaction.commit();
-        session.close();
+                try {
+                    scriptRunner.runScript(new FileReader(Constants.RESOURCES_PATH.resolve("schema.sql").toString()));
+                } catch (Exception ignore) {
+                    Main.LOGGER.error("Could not run database initialization script");
+                }
+            });
+        } finally {
+            transaction.commit();
+            session.close();
+        }
     }
 }

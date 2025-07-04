@@ -1,26 +1,41 @@
 package org.dto;
 
 import jakarta.persistence.*;
+import org.hibernate.Session;
 
 @Entity
-@Table(name = "user")
+@Table(name = UserDto.USER_TABLE_NAME)
 public class UserDto {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_user", nullable = false)
-    private long idUser;
+    public static final String USER_TABLE_NAME = "user";
 
-    @Column(name = "snowflake_user", nullable = false)
+    public static final String SNOWFLAKE_USER_COLUMN_NAME = "snowflake_user";
+
+    @Id
+    @Column(name = UserDto.SNOWFLAKE_USER_COLUMN_NAME, unique = true, nullable = false)
     private String snowflakeUser;
 
     public UserDto() {}
 
-    public UserDto(long idUser, String snowflakeUser) {
-        this.idUser = idUser;
+    public UserDto(String snowflakeUser) {
         this.snowflakeUser = snowflakeUser;
     }
 
-    public void setSnowflakeUser(String snowflakeUser) {
-        this.snowflakeUser = snowflakeUser;
+    public static UserDto getUser(Session session, String snowflake) {
+        String sql = "SELECT * FROM " + UserDto.USER_TABLE_NAME + " WHERE "
+                + UserDto.SNOWFLAKE_USER_COLUMN_NAME + " = :p_snowflake";
+
+        return session.createNativeQuery(sql, UserDto.class)
+                .setParameter("p_snowflake", snowflake)
+                .getSingleResultOrNull();
+    }
+
+    public static boolean userExists(Session session, String snowflake) {
+        String sql = "SELECT * FROM " + UserDto.USER_TABLE_NAME + " WHERE "
+                + UserDto.SNOWFLAKE_USER_COLUMN_NAME + " = :p_snowflake";
+
+        return !session.createNativeQuery(sql, UserDto.class)
+                .setParameter("p_snowflake", snowflake)
+                .getResultList()
+                .isEmpty();
     }
 }

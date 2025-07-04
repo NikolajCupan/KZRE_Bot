@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.action.Action;
 import org.action.ActionHandler;
+import org.action.GuildManager;
 import org.action.Quote;
 import org.jetbrains.annotations.NotNull;
 import org.parser.ChatCommand;
@@ -15,8 +16,10 @@ import java.util.*;
 
 public class MessagesListener extends ListenerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessagesListener.class);
+
     private static final Map<String, ActionHandler> REGISTERED_ACTION_HANDLERS = new HashMap<>();
-    private static final UserHandler USER_HANDLER = new UserHandler();
+    private static final UserManager USER_MANAGER = new UserManager();
+    private static final GuildManager GUILD_MANAGER = new GuildManager();
 
     static {
         MessagesListener.REGISTERED_ACTION_HANDLERS.put(Action.QUOTE.toString(), new Quote());
@@ -46,7 +49,10 @@ public class MessagesListener extends ListenerAdapter {
         }
 
         MessagesListener.LOGGER.info("Received action \"{}\"", content);
-        MessagesListener.USER_HANDLER.refreshUser(event);
+
+        MessagesListener.USER_MANAGER.refreshUser(event);
+        MessagesListener.GUILD_MANAGER.refreshGuild(event);
+
         actionHandler.executeAction(event, chatCommand);
     }
 }
