@@ -6,7 +6,6 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.action.Action;
 import org.action.ActionHandler;
-import org.action.GuildManager;
 import org.action.Quote;
 import org.jetbrains.annotations.NotNull;
 import org.parser.ChatCommand;
@@ -26,6 +25,15 @@ public class MessagesListener extends ListenerAdapter {
 
     static {
         MessagesListener.REGISTERED_ACTION_HANDLERS.put(Action.QUOTE.toString(), new Quote());
+    }
+
+    public static Set<String> getActionsModifiersKeywords() {
+        Set<String> keywords = new HashSet<>();
+        for (ActionHandler actionHandler : MessagesListener.REGISTERED_ACTION_HANDLERS.values()) {
+            keywords.addAll(actionHandler.getActionModifiersKeywords());
+        }
+
+        return keywords;
     }
 
     @Override

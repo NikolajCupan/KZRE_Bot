@@ -1,7 +1,6 @@
-package org.action;
+package org;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import org.Main;
 import org.dto.GuildDto;
 import org.hibernate.Session;
 import org.hibernate.Transaction;

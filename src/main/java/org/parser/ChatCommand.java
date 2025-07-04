@@ -1,18 +1,21 @@
 package org.parser;
 
 import org.Helper;
+import org.MessagesListener;
 import org.Modifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class ChatCommand {
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatCommand.class);
+
+    private static final Set<String> ACTIONS_MODIFIERS_KEYWORDS = MessagesListener.getActionsModifiersKeywords();
+    static {
+        ChatCommand.ACTIONS_MODIFIERS_KEYWORDS.add("VALUE");
+    }
 
     public static final String ACTION_PREFIX = "!";
     public static final String MODIFIER_PREFIX = "-";
@@ -23,49 +26,51 @@ public class ChatCommand {
     public ChatCommand(String content) {
         String[] tokens = content.split(" ");
 
-        this.chatAction = tokens[0].substring(1).toUpperCase();
+        this.chatAction = tokens[0].substring(ChatCommand.ACTION_PREFIX.length()).toUpperCase();
         this.chatModifiers = new HashMap<>();
 
         int tokenIndex = 1;
         while (tokenIndex < tokens.length) {
-            String token = tokens[tokenIndex];
+            String token = tokens[tokenIndex].toUpperCase();
 
-            if (!token.startsWith(ChatCommand.MODIFIER_PREFIX) || token.length() < 2) {
+            if (!token.startsWith(ChatCommand.MODIFIER_PREFIX) || token.length() < ChatCommand.MODIFIER_PREFIX.length() + 1) {
                 ChatCommand.LOGGER.warn("Ignored token \"{}\"", token);
                 ++tokenIndex;
                 continue;
             }
 
-            String modifier = token.substring(1);
+            String modifier = token.substring(ChatCommand.MODIFIER_PREFIX.length());
 
-            if (!modifier.equals("value")) {
+            if (!modifier.equalsIgnoreCase("VALUE")) {
                 List<String> arguments = new ArrayList<>();
 
                 int argumentIndex = tokenIndex + 1;
                 while (argumentIndex < tokens.length) {
-                    String argument = tokens[argumentIndex];
-                    if (argument.startsWith(ChatCommand.MODIFIER_PREFIX)) {
+                    String argument = tokens[argumentIndex].toUpperCase();
+                    if (argument.startsWith(ChatCommand.MODIFIER_PREFIX)
+                            && ChatCommand.ACTIONS_MODIFIERS_KEYWORDS.contains(argument.substring(ChatCommand.MODIFIER_PREFIX.length()))) {
                         break;
                     }
 
-                    arguments.add(argument.toUpperCase());
+                    arguments.add(argument);
                     ++argumentIndex;
                 }
 
                 arguments.removeIf(String::isBlank);
-                this.chatModifiers.put(modifier.toUpperCase(), arguments);
+                this.chatModifiers.put(modifier, arguments);
 
                 tokenIndex = argumentIndex;
             } else {
                 StringBuilder stringBuilder = new StringBuilder();
 
                 for (++tokenIndex; tokenIndex < tokens.length; ++tokenIndex) {
-                    String argument = tokens[tokenIndex];
+                    String argument = tokens[tokenIndex].toUpperCase();
                     stringBuilder.append(argument);
 
-                    if (argument.startsWith("-") && argument.length() > 1) {
-                        ChatCommand.LOGGER.warn("Modifier \"{}\" possibly ignored, modifier \"value\" should be last",
-                                argument.substring(1));
+                    if (argument.startsWith(ChatCommand.MODIFIER_PREFIX)
+                            && argument.length() > ChatCommand.MODIFIER_PREFIX.length()) {
+                        ChatCommand.LOGGER.warn("Modifier \"{}\" possibly ignored, modifier \"VALUE\" should be last",
+                                argument.substring(ChatCommand.MODIFIER_PREFIX.length()));
                     }
 
                     if (tokenIndex != tokens.length - 1) {
@@ -73,7 +78,7 @@ public class ChatCommand {
                     }
                 }
 
-                this.chatModifiers.put(modifier.toUpperCase(), List.of(stringBuilder.toString()));
+                this.chatModifiers.put(modifier, List.of(stringBuilder.toString()));
             }
         }
     }

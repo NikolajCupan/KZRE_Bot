@@ -15,9 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.MessageFormat;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Quote extends ActionHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(Quote.class);
@@ -58,6 +56,16 @@ public class Quote extends ActionHandler {
     @Override
     public Action getAction() {
         return Quote.action;
+    }
+
+    @Override
+    public Set<String> getActionModifiersKeywords() {
+        Set<String> keywords = new HashSet<>();
+        for (ActionModifier modifier : ActionModifier.class.getEnumConstants()) {
+            keywords.add(modifier.toString());
+        }
+
+        return keywords;
     }
 
     @Override
