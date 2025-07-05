@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class ChatCommand {
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatCommand.class);
@@ -67,12 +66,6 @@ public class ChatCommand {
                     String argument = tokens[tokenIndex].toUpperCase();
                     stringBuilder.append(argument);
 
-                    if (argument.startsWith(ChatCommand.MODIFIER_PREFIX)
-                            && argument.length() > ChatCommand.MODIFIER_PREFIX.length()) {
-                        ChatCommand.LOGGER.warn("Modifier \"{}\" possibly ignored, modifier \"VALUE\" should be last",
-                                argument.substring(ChatCommand.MODIFIER_PREFIX.length()));
-                    }
-
                     if (tokenIndex != tokens.length - 1) {
                         stringBuilder.append(' ');
                     }
@@ -87,7 +80,7 @@ public class ChatCommand {
         return this.chatAction;
     }
 
-    public<T extends Enum<T>, U extends Enum<U>, V extends Enum<V>> V getArgumentAsEnum(Modifier<T, U> modifier, Class<V> requiredType) {
+    public<T extends Enum<T>, U extends Enum<U>, V extends Number & Comparable<V>, W extends Enum<W>> W getArgumentAsEnum(Modifier<T, U, V> modifier, Class<W> requiredType) {
         Helper.TypedValue argument = this.getArgument(modifier);
         if (argument.type() != Helper.TypedValue.Type.ENUMERATOR) {
             throw new RuntimeException("Argument is not enumerator");
@@ -96,36 +89,29 @@ public class ChatCommand {
         return requiredType.cast(Enum.valueOf(requiredType, argument.value()));
     }
 
-    public<T extends Enum<T>, U extends Enum<U>> Helper.TypedValue getArgument(Modifier<T, U> modifier) {
+    public<T extends Enum<T>, U extends Enum<U>, V extends Number & Comparable<V>> Helper.TypedValue getArgument(Modifier<T, U, V> modifier) {
         if (!this.chatModifiers.containsKey(modifier.getModifier().toString())) {
-            return modifier.getDefaultArgument();
+            return new Helper.TypedValue(
+                    modifier.getDefaultArgumentType(), Helper.TypedValue.Resolution.MODIFIER_MISSING, modifier.getDefaultArgument()
+            );
         }
 
         List<String> chatArguments = this.chatModifiers.get(modifier.getModifier().toString());
-        if (chatArguments.isEmpty()) {
-            return modifier.getDefaultArgument();
+        if (chatArguments.isEmpty() || chatArguments.getFirst().isBlank()) {
+            return new Helper.TypedValue(
+                    modifier.getDefaultArgumentType(), Helper.TypedValue.Resolution.ARGUMENT_MISSING, modifier.getDefaultArgument()
+            );
         }
 
         String firstChatArgument = chatArguments.getFirst();
         if (!modifier.isPossibleArgument(firstChatArgument)) {
-            return modifier.getDefaultArgument();
+            return new Helper.TypedValue(
+                    modifier.getDefaultArgumentType(), Helper.TypedValue.Resolution.ARGUMENT_INVALID, modifier.getDefaultArgument()
+            );
         }
 
-        return new Helper.TypedValue(modifier.getChatArgumentType(firstChatArgument), firstChatArgument);
-    }
-
-    public<T extends Enum<T>, U extends Enum<U>> List<Helper.TypedValue> getArguments(Modifier<T, U> modifier) {
-        if (!this.chatModifiers.containsKey(modifier.getModifier().toString())) {
-            return List.of(modifier.getDefaultArgument());
-        }
-
-        List<String> chatArguments = this.chatModifiers.get(modifier.getModifier().toString());
-        if (chatArguments.isEmpty()) {
-            return List.of(modifier.getDefaultArgument());
-        }
-
-        return chatArguments.stream()
-                .map(element -> new Helper.TypedValue(modifier.getChatArgumentType(element), element))
-                .collect(Collectors.toList());
+        return new Helper.TypedValue(
+                modifier.getChatArgumentType(firstChatArgument), Helper.TypedValue.Resolution.ARGUMENT_VALID, firstChatArgument
+        );
     }
 }

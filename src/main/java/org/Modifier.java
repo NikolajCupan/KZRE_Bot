@@ -3,7 +3,7 @@ package org;
 import java.util.HashSet;
 import java.util.Set;
 
-public class Modifier<T extends Enum<T>, U extends Enum<U>> {
+public class Modifier<T extends Enum<T>, U extends Enum<U>, V extends Number & Comparable<V>> {
     private final T modifier;
 
     private final Set<String> possibleArguments;
@@ -15,13 +15,18 @@ public class Modifier<T extends Enum<T>, U extends Enum<U>> {
     private final boolean argumentCanBeDecimalNumber;
     private final boolean argumentCanBeWholeNumber;
 
-    public <V> Modifier(
+    private final V minInclusive;
+    private final V maxInclusive;
+
+    public <W> Modifier(
             T modifier,
             Class<U> enumClass,
-            V defaultArgument,
+            W defaultArgument,
             boolean argumentCanBeAnyString,
             boolean argumentCanBeDecimalNumber,
-            boolean argumentCanBeWholeNumber
+            boolean argumentCanBeWholeNumber,
+            V minInclusive,
+            V maxInclusive
     ) {
         this.modifier = modifier;
 
@@ -40,8 +45,20 @@ public class Modifier<T extends Enum<T>, U extends Enum<U>> {
 
             this.defaultArgumentType = Helper.TypedValue.Type.ENUMERATOR;
         } else if (Helper.isWholeNumber(defaultArgument)) {
+            if (!(minInclusive instanceof Long) || !(defaultArgument instanceof Long)) {
+                throw new IllegalArgumentException("If default argument is a whole number, both it and the range values must be of type Long");
+            } else if (!Helper.isLongInRange(defaultArgument, minInclusive, maxInclusive)) {
+                throw new IllegalArgumentException("Default argument is out of specified range");
+            }
+
             this.defaultArgumentType = Helper.TypedValue.Type.WHOLE_NUMBER;
-        } else if (Helper.isDecimalNumber(defaultArgument)) {
+        } else if (Helper.isDecimal(defaultArgument)) {
+            if (!(minInclusive instanceof Double) || !(defaultArgument instanceof Double)) {
+                throw new IllegalArgumentException("If default argument is a decimal number, both it and the range values must be of type Double");
+            } else if (!Helper.isDoubleInRange(defaultArgument, minInclusive, maxInclusive)) {
+                throw new IllegalArgumentException("Default argument is out of specified range");
+            }
+
             this.defaultArgumentType = Helper.TypedValue.Type.DECIMAL_NUMBER;
         } else {
             this.defaultArgumentType = Helper.TypedValue.Type.STRING;
@@ -50,18 +67,30 @@ public class Modifier<T extends Enum<T>, U extends Enum<U>> {
         this.argumentCanBeAnyString = argumentCanBeAnyString;
         this.argumentCanBeDecimalNumber = argumentCanBeDecimalNumber;
         this.argumentCanBeWholeNumber = argumentCanBeWholeNumber;
+
+        if (minInclusive != null && minInclusive.compareTo(maxInclusive) > 0) {
+            throw new IllegalArgumentException("Min value must be lower or equal to max value");
+        }
+        this.minInclusive = minInclusive;
+        this.maxInclusive = maxInclusive;
     }
 
-    public Helper.TypedValue getDefaultArgument() {
-        return new Helper.TypedValue(this.defaultArgumentType, this.defaultArgument);
+    public String getDefaultArgument() {
+        return this.defaultArgument;
+    }
+
+    public Helper.TypedValue.Type getDefaultArgumentType() {
+        return this.defaultArgumentType;
     }
 
     public boolean isPossibleArgument(String chatArgument) {
         if (this.argumentCanBeAnyString) {
             return true;
-        } else if (this.argumentCanBeDecimalNumber && Helper.isDecimalNumber(chatArgument)) {
+        } else if (this.argumentCanBeDecimalNumber && Helper.isDecimal(chatArgument)
+                && Helper.isDoubleInRange(chatArgument, this.minInclusive, this.maxInclusive)) {
             return true;
-        } else if (this.argumentCanBeWholeNumber && Helper.isWholeNumber(chatArgument)) {
+        } else if (this.argumentCanBeWholeNumber && Helper.isWholeNumber(chatArgument)
+                && Helper.isLongInRange(chatArgument, this.minInclusive, this.maxInclusive)) {
             return true;
         }
 
@@ -71,9 +100,11 @@ public class Modifier<T extends Enum<T>, U extends Enum<U>> {
     public Helper.TypedValue.Type getChatArgumentType(String chatArgument) {
         if (this.possibleArguments.contains(chatArgument)) {
             return Helper.TypedValue.Type.ENUMERATOR;
-        } else if (this.argumentCanBeWholeNumber && Helper.isWholeNumber(chatArgument)) {
+        } else if (this.argumentCanBeWholeNumber && Helper.isWholeNumber(chatArgument)
+                && Helper.isLongInRange(chatArgument, this.minInclusive, this.maxInclusive)) {
             return Helper.TypedValue.Type.WHOLE_NUMBER;
-        } else if (this.argumentCanBeDecimalNumber && Helper.isDecimalNumber(chatArgument)) {
+        } else if (this.argumentCanBeDecimalNumber && Helper.isDecimal(chatArgument)
+                && Helper.isDoubleInRange(chatArgument, this.minInclusive, this.maxInclusive)) {
             return Helper.TypedValue.Type.DECIMAL_NUMBER;
         } else {
             return Helper.TypedValue.Type.STRING;

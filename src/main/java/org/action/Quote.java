@@ -27,29 +27,29 @@ public class Quote extends ActionHandler {
     private enum CountArgument { ALL }
 
     private static final Action action = Action.QUOTE;
-    private static final Map<ActionModifier, Modifier<? extends Enum<?>, ? extends Enum<?>>> ACTION_MODIFIERS =
+    private static final Map<ActionModifier, Modifier<? extends Enum<?>, ? extends Enum<?>, ? extends Number>> ACTION_MODIFIERS =
             new EnumMap<>(ActionModifier.class);
 
     static {
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.TYPE,
-                new Modifier<>(ActionModifier.TYPE, TypeArgument.class, TypeArgument.GET_QUOTE, false, false, false)
+                new Modifier<>(ActionModifier.TYPE, TypeArgument.class, TypeArgument.GET_QUOTE, false, false, false, null, null)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.TAG,
-                new Modifier<>(ActionModifier.TAG, Helper.EmptyEnum.class, null, true, false, false)
+                new Modifier<>(ActionModifier.TAG, Helper.EmptyEnum.class, null, true, false, false, null, null)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.ORDER,
-                new Modifier<>(ActionModifier.ORDER, OrderArgument.class, OrderArgument.RANDOM, false, false, false)
+                new Modifier<>(ActionModifier.ORDER, OrderArgument.class, OrderArgument.RANDOM, false, false, false, null, null)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.COUNT,
-                new Modifier<>(ActionModifier.COUNT, CountArgument.class, 5, false, false, true)
+                new Modifier<>(ActionModifier.COUNT, CountArgument.class, 5L, false, false, true, 1L, Long.MAX_VALUE)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.VALUE,
-                new Modifier<>(ActionModifier.VALUE, Helper.EmptyEnum.class, null, true, false, false)
+                new Modifier<>(ActionModifier.VALUE, Helper.EmptyEnum.class, null, true, false, false, null, null)
         );
     }
 
@@ -95,8 +95,8 @@ public class Quote extends ActionHandler {
             resultsCount = Long.parseLong(chatCount.value());
         }
 
-        Helper.failIfOutOfRange(resultsCount, 0, Long.MAX_VALUE, MessageFormat.format(
-                "Argument for modifier \"{0}\" cannot be negative", ActionModifier.COUNT
+        Helper.failIfOutOfRange(resultsCount, 1, Long.MAX_VALUE, MessageFormat.format(
+                "Argument for modifier \"{0}\" must be positive", ActionModifier.COUNT
         ));
 
 
@@ -138,7 +138,10 @@ public class Quote extends ActionHandler {
 
     private void handleNewTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         Helper.TypedValue chatNewTag = chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.VALUE));
-        Helper.failIfBlank(chatNewTag.value(), MessageFormat.format("Argument for modifier \"{0}\" was not found", ActionModifier.VALUE));
+        if (chatNewTag.resolution() != Helper.TypedValue.Resolution.ARGUMENT_VALID) {
+            processingContext.addMessages(chatNewTag.getErrorMessage(ActionModifier.VALUE.toString()), ProcessingContext.MessageType.ERROR);
+            return;
+        }
 
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
