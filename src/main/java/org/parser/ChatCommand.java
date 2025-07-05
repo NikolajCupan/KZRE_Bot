@@ -119,6 +119,10 @@ public class ChatCommand {
             Enum<?> actionModifierEnumerator = this.actionFromChat.getActionModifierEnumerator(possibleModifier);
             Modifier<? extends Enum<?>, ? extends Number> modifier = this.actionFromChat.getModifier(actionModifierEnumerator);
 
+            if (modifier.isSwitchModifier()) {
+                continue;
+            }
+
             if (!this.modifiersFromChat.containsKey(actionModifierEnumerator)) {
                 this.modifiersFromChat.putIfAbsent(
                         actionModifierEnumerator,
@@ -132,6 +136,26 @@ public class ChatCommand {
 
     public ActionHandler getAction() {
         return this.actionFromChat;
+    }
+
+    public<T extends Enum<T>> boolean isSwitchModifierPresent(T modifier, ProcessingContext processingContext) {
+        List<Helper.TypedValue> arguments = this.modifiersFromChat.get(modifier);
+        if (arguments == null || arguments.isEmpty()) {
+            return false;
+        }
+
+        if (arguments.stream().anyMatch(element -> element.type() != Helper.TypedValue.Type.SWITCH)) {
+            throw new IllegalStateException("Modifier is not a switch modifier");
+        }
+
+        if (arguments.stream().anyMatch(element -> element.resolution() != Helper.TypedValue.Resolution.ARGUMENT_MISSING)) {
+            processingContext.addMessages(
+                    MessageFormat.format("Modifier \"{0}\" is a switch modifier, it should not be provided with any arguments", modifier),
+                    ProcessingContext.MessageType.WARNING
+            );
+        }
+
+        return true;
     }
 
     public<T extends Enum<T>, U extends Enum<U>> U getFirstArgumentAsEnum(T modifier, Class<U> requiredEnumClass, ProcessingContext processingContext) {

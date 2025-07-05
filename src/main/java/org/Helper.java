@@ -8,7 +8,7 @@ import java.text.MessageFormat;
 
 public class Helper {
     public record TypedValue(Helper.TypedValue.Type type, Helper.TypedValue.Resolution resolution, String value, Class<? extends Enum<?>> enumClass) {
-        public enum Type { STRING, WHOLE_NUMBER, DECIMAL_NUMBER, ENUMERATOR, NULL }
+        public enum Type { STRING, WHOLE_NUMBER, DECIMAL_NUMBER, ENUMERATOR, SWITCH, NULL }
         public enum Resolution { MODIFIER_MISSING, ARGUMENT_MISSING, ARGUMENT_INVALID, ARGUMENT_VALID }
 
         public String valueFirstWord() {

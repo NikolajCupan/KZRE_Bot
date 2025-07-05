@@ -15,6 +15,7 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
     private final boolean argumentCanBeDecimalNumber;
     private final boolean argumentCanBeWholeNumber;
 
+    private final boolean isSwitchModifier;
     private final U minInclusive;
     private final U maxInclusive;
 
@@ -25,6 +26,7 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
             boolean argumentCanBeAnyString,
             boolean argumentCanBeDecimalNumber,
             boolean argumentCanBeWholeNumber,
+            boolean isSwitchModifier,
             U minInclusive,
             U maxInclusive
     ) {
@@ -37,7 +39,11 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
 
         this.defaultArgument = defaultArgument == null ? "" : String.valueOf(defaultArgument);
         if (defaultArgument == null) {
-            this.defaultArgumentType = Helper.TypedValue.Type.NULL;
+            if (isSwitchModifier) {
+                this.defaultArgumentType = Helper.TypedValue.Type.SWITCH;
+            } else {
+                this.defaultArgumentType = Helper.TypedValue.Type.NULL;
+            }
         } else if (defaultArgument instanceof Enum<?>) {
             if (!Helper.enumeratorIsFromEnum(possibleArgumentsEnumClass, (Enum<?>)defaultArgument)) {
                 throw new IllegalArgumentException("If default argument is an enumerator, it must be from the possible arguments enum");
@@ -69,12 +75,23 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
         this.argumentCanBeAnyString = argumentCanBeAnyString;
         this.argumentCanBeDecimalNumber = argumentCanBeDecimalNumber;
         this.argumentCanBeWholeNumber = argumentCanBeWholeNumber;
+        this.isSwitchModifier = isSwitchModifier;
+
 
         if (minInclusive != null && minInclusive.compareTo(maxInclusive) > 0) {
             throw new IllegalArgumentException("Min value must be lower or equal to max value");
         }
         this.minInclusive = minInclusive;
         this.maxInclusive = maxInclusive;
+
+
+        if (this.isSwitchModifier && this.consumeRest) {
+            throw new IllegalArgumentException("Switch modifier cannot use consume rest option");
+        }
+        if (this.isSwitchModifier
+                && (this.possibleArgumentsEnumClass != Helper.EmptyEnum.class || this.possibleArgumentsEnumClass.getEnumConstants().length != 0)) {
+            throw new IllegalArgumentException("Switch modifier must use EmptyEnum for possible arguments type");
+        }
     }
 
     public Class<T> getPossibleArgumentsEnumClass() {
@@ -91,6 +108,10 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
 
     public boolean isConsumeRest() {
         return this.consumeRest;
+    }
+
+    public boolean isSwitchModifier() {
+        return this.isSwitchModifier;
     }
 
     public boolean isPossibleArgument(String chatArgument) {
