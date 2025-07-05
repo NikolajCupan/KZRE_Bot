@@ -3,43 +3,43 @@ package org;
 import java.util.HashSet;
 import java.util.Set;
 
-public class Modifier<T extends Enum<T>, U extends Enum<U>, V extends Number & Comparable<V>> {
-    private final T modifier;
-
+public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
     private final Set<String> possibleArguments;
+    private final Class<T> possibleArgumentsEnumClass;
 
     private final String defaultArgument;
     private final Helper.TypedValue.Type defaultArgumentType;
 
+    private final boolean consumeRest;
     private final boolean argumentCanBeAnyString;
     private final boolean argumentCanBeDecimalNumber;
     private final boolean argumentCanBeWholeNumber;
 
-    private final V minInclusive;
-    private final V maxInclusive;
+    private final U minInclusive;
+    private final U maxInclusive;
 
-    public <W> Modifier(
-            T modifier,
-            Class<U> enumClass,
-            W defaultArgument,
+    public <V> Modifier(
+            Class<T> possibleArgumentsEnumClass,
+            V defaultArgument,
+            boolean consumeRest,
             boolean argumentCanBeAnyString,
             boolean argumentCanBeDecimalNumber,
             boolean argumentCanBeWholeNumber,
-            V minInclusive,
-            V maxInclusive
+            U minInclusive,
+            U maxInclusive
     ) {
-        this.modifier = modifier;
-
         this.possibleArguments = new HashSet<>();
-        for (Enum<U> possibleArgument : enumClass.getEnumConstants()) {
+        for (Enum<T> possibleArgument : possibleArgumentsEnumClass.getEnumConstants()) {
             this.possibleArguments.add(possibleArgument.toString());
         }
+        this.possibleArgumentsEnumClass = possibleArgumentsEnumClass;
+
 
         this.defaultArgument = defaultArgument == null ? "" : String.valueOf(defaultArgument);
         if (defaultArgument == null) {
             this.defaultArgumentType = Helper.TypedValue.Type.NULL;
         } else if (defaultArgument instanceof Enum<?>) {
-            if (!Helper.enumeratorIsFromEnum(enumClass, (Enum<?>)defaultArgument)) {
+            if (!Helper.enumeratorIsFromEnum(possibleArgumentsEnumClass, (Enum<?>)defaultArgument)) {
                 throw new IllegalArgumentException("If default argument is an enumerator, it must be from the possible arguments enum");
             }
 
@@ -64,6 +64,8 @@ public class Modifier<T extends Enum<T>, U extends Enum<U>, V extends Number & C
             this.defaultArgumentType = Helper.TypedValue.Type.STRING;
         }
 
+
+        this.consumeRest = consumeRest;
         this.argumentCanBeAnyString = argumentCanBeAnyString;
         this.argumentCanBeDecimalNumber = argumentCanBeDecimalNumber;
         this.argumentCanBeWholeNumber = argumentCanBeWholeNumber;
@@ -75,12 +77,20 @@ public class Modifier<T extends Enum<T>, U extends Enum<U>, V extends Number & C
         this.maxInclusive = maxInclusive;
     }
 
+    public Class<T> getPossibleArgumentsEnumClass() {
+        return this.possibleArgumentsEnumClass;
+    }
+
     public String getDefaultArgument() {
         return this.defaultArgument;
     }
 
     public Helper.TypedValue.Type getDefaultArgumentType() {
         return this.defaultArgumentType;
+    }
+
+    public boolean isConsumeRest() {
+        return this.consumeRest;
     }
 
     public boolean isPossibleArgument(String chatArgument) {
@@ -109,9 +119,5 @@ public class Modifier<T extends Enum<T>, U extends Enum<U>, V extends Number & C
         } else {
             return Helper.TypedValue.Type.STRING;
         }
-    }
-
-    public T getModifier() {
-        return this.modifier;
     }
 }

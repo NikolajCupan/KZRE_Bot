@@ -1,10 +1,7 @@
 package org.action;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import org.Helper;
-import org.Main;
-import org.Modifier;
-import org.ProcessingContext;
+import org.*;
 import org.dto.TagDto;
 import org.exception.CustomException;
 import org.hibernate.Session;
@@ -20,36 +17,36 @@ import java.util.*;
 public class Quote extends ActionHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(Quote.class);
 
-    private enum ActionModifier { TYPE, TAG, ORDER, COUNT, VALUE }
+    public enum ActionModifier { TYPE, TAG, ORDER, COUNT, VALUE }
 
     private enum TypeArgument { GET_QUOTE, GET_TAG, NEW_QUOTE, NEW_TAG }
     private enum OrderArgument { RANDOM, NEWEST, OLDEST }
     private enum CountArgument { ALL }
 
     private static final Action action = Action.QUOTE;
-    private static final Map<ActionModifier, Modifier<? extends Enum<?>, ? extends Enum<?>, ? extends Number>> ACTION_MODIFIERS =
+    private static final Map<ActionModifier, Modifier<? extends Enum<?>, ? extends Number>> ACTION_MODIFIERS =
             new EnumMap<>(ActionModifier.class);
 
     static {
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.TYPE,
-                new Modifier<>(ActionModifier.TYPE, TypeArgument.class, TypeArgument.GET_QUOTE, false, false, false, null, null)
+                new Modifier<>(TypeArgument.class, null, false, false, false, false, null, null)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.TAG,
-                new Modifier<>(ActionModifier.TAG, Helper.EmptyEnum.class, null, true, false, false, null, null)
+                new Modifier<>(Helper.EmptyEnum.class, null, false, true, false, false, null, null)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.ORDER,
-                new Modifier<>(ActionModifier.ORDER, OrderArgument.class, OrderArgument.RANDOM, false, false, false, null, null)
+                new Modifier<>(OrderArgument.class, OrderArgument.RANDOM, false, false, false, false, null, null)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.COUNT,
-                new Modifier<>(ActionModifier.COUNT, CountArgument.class, 5L, false, false, true, 1L, Long.MAX_VALUE)
+                new Modifier<>(CountArgument.class, 5L, false, false, false, true, 1L, Long.MAX_VALUE)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.VALUE,
-                new Modifier<>(ActionModifier.VALUE, Helper.EmptyEnum.class, null, true, false, false, null, null)
+                new Modifier<>(Helper.EmptyEnum.class, null, true, true, false, false, null, null)
         );
     }
 
@@ -59,19 +56,25 @@ public class Quote extends ActionHandler {
     }
 
     @Override
-    public Set<String> getActionModifiersKeywords() {
-        Set<String> keywords = new HashSet<>();
-        for (ActionModifier modifier : ActionModifier.class.getEnumConstants()) {
-            keywords.add(modifier.toString());
-        }
+    public Enum<?> getActionModifierEnumerator(String strModifier) {
+        return Enum.valueOf(ActionModifier.class, strModifier);
+    }
 
-        return keywords;
+    @Override
+    public Modifier<? extends Enum<?>, ? extends Number> getModifier(Enum<?> actionModifier) {
+        return Quote.ACTION_MODIFIERS.get(actionModifier);
+    }
+
+    @Override
+    public Class<? extends Enum<?>> getActionModifierEnum() {
+        return ActionModifier.class;
     }
 
     @Override
     public void executeAction(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
-        TypeArgument typeArgument = chatCommand.getArgumentAsEnum(Quote.ACTION_MODIFIERS.get(ActionModifier.TYPE), TypeArgument.class);
         try {
+            TypeArgument typeArgument = chatCommand.getFirstArgumentAsEnum(ActionModifier.TYPE, TypeArgument.class, processingContext);
+
             switch (typeArgument) {
                 case TypeArgument.GET_QUOTE -> this.handleGetQuote(event, chatCommand, processingContext);
                 case TypeArgument.GET_TAG -> this.handleGetTag(event, chatCommand, processingContext);
@@ -87,17 +90,13 @@ public class Quote extends ActionHandler {
     }
 
     private void handleGetTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
-        OrderArgument chatOrder = chatCommand.getArgumentAsEnum(Quote.ACTION_MODIFIERS.get(ActionModifier.ORDER), OrderArgument.class);
-        Helper.TypedValue chatCount = chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.COUNT));
+        OrderArgument chatOrder = chatCommand.getFirstArgumentAsEnum(ActionModifier.ORDER, OrderArgument.class, processingContext);
+        Helper.TypedValue chatCount = chatCommand.getFirstArgument(ActionModifier.COUNT, false, processingContext);
 
         long resultsCount = Long.MAX_VALUE;
         if (chatCount.type() == Helper.TypedValue.Type.WHOLE_NUMBER) {
             resultsCount = Long.parseLong(chatCount.value());
         }
-
-        Helper.failIfOutOfRange(resultsCount, 1, Long.MAX_VALUE, MessageFormat.format(
-                "Argument for modifier \"{0}\" must be positive", ActionModifier.COUNT
-        ));
 
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
@@ -137,35 +136,29 @@ public class Quote extends ActionHandler {
     }
 
     private void handleNewTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
-        Helper.TypedValue chatNewTag = chatCommand.getArgument(Quote.ACTION_MODIFIERS.get(ActionModifier.VALUE));
-        if (chatNewTag.resolution() != Helper.TypedValue.Resolution.ARGUMENT_VALID) {
-            processingContext.addMessages(chatNewTag.getErrorMessage(ActionModifier.VALUE.toString()), ProcessingContext.MessageType.ERROR);
+        Helper.TypedValue chatNewTag = chatCommand.getFirstArgumentFirstWord(ActionModifier.VALUE, false, processingContext);
+        if (chatNewTag.value().startsWith(ChatCommand.MODIFIER_PREFIX)) {
+            processingContext.addMessages(
+                    MessageFormat.format("Tag cannot start with the \"{0}\" character", ChatCommand.MODIFIER_PREFIX),
+                    ProcessingContext.MessageType.ERROR
+            );
             return;
         }
-
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
 
-        String chatNewTagFirstWord = chatNewTag.valueFirstWord();
         try {
-            if (!chatNewTagFirstWord.equals(chatNewTag.value())) {
-                processingContext.addMessages(
-                        MessageFormat.format("Argument for modifier \"{0}\" should not contain spaces, everything after first word was ignored", ActionModifier.VALUE),
-                        ProcessingContext.MessageType.WARNING
-                );
-            }
-
-            TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewTagFirstWord);
+            TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewTag.value());
             session.persist(newTag);
 
             processingContext.addMessages(
-                    MessageFormat.format("New tag \"{0}\" was successfully created", chatNewTagFirstWord),
+                    MessageFormat.format("New tag \"{0}\" was successfully created", chatNewTag.value()),
                     ProcessingContext.MessageType.SUCCESS
             );
         } catch (ConstraintViolationException exception) {
             processingContext.addMessages(
-                    MessageFormat.format("Tag \"{0}\" already exists", chatNewTagFirstWord),
+                    MessageFormat.format("Tag \"{0}\" already exists", chatNewTag.value()),
                     ProcessingContext.MessageType.ERROR
             );
         } finally {

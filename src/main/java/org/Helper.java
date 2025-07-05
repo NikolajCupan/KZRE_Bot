@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import java.text.MessageFormat;
 
 public class Helper {
-    public record TypedValue(Helper.TypedValue.Type type, Helper.TypedValue.Resolution resolution, String value) {
+    public record TypedValue(Helper.TypedValue.Type type, Helper.TypedValue.Resolution resolution, String value, Class<? extends Enum<?>> enumClass) {
         public enum Type { STRING, WHOLE_NUMBER, DECIMAL_NUMBER, ENUMERATOR, NULL }
         public enum Resolution { MODIFIER_MISSING, ARGUMENT_MISSING, ARGUMENT_INVALID, ARGUMENT_VALID }
 
@@ -24,13 +24,20 @@ public class Helper {
             return this.value.substring(0, spaceIndex);
         }
 
-        public String getErrorMessage(String modifierName) {
-            return switch (this.resolution) {
-                case MODIFIER_MISSING -> MessageFormat.format("Modifier \"{0}\" was not found", modifierName);
-                case ARGUMENT_MISSING -> MessageFormat.format("Argument for modifier \"{0}\" was not found", modifierName);
-                case ARGUMENT_INVALID -> MessageFormat.format("Argument for modifier \"{0}\" is not valid", modifierName);
-                case ARGUMENT_VALID -> throw new IllegalStateException(MessageFormat.format("Cannot generate error message when resolution is set to\"{0}\"", this.resolution));
+        public String getStateMessage(String modifierName, boolean includeDefaultValueUsage) {
+            String message = "";
+            switch (this.resolution) {
+                case MODIFIER_MISSING -> message = MessageFormat.format("Modifier \"{0}\" was not found", modifierName);
+                case ARGUMENT_MISSING -> message = MessageFormat.format("Argument for modifier \"{0}\" was not found", modifierName);
+                case ARGUMENT_INVALID -> message = MessageFormat.format("Argument for modifier \"{0}\" is not valid", modifierName);
+                case ARGUMENT_VALID -> throw new IllegalStateException(MessageFormat.format("Cannot generate state message when resolution is set to\"{0}\"", this.resolution));
             };
+
+            if (includeDefaultValueUsage && this.type != Type.NULL) {
+                message += MessageFormat.format(", default value \"{0}\" was used instead", this.value);
+            }
+
+            return message;
         }
 
         @NotNull
@@ -70,12 +77,12 @@ public class Helper {
         }
     }
 
-    public static<T> boolean isLongInRange(T testedValue, T minInclusive, T maxInclusive) {
-        if (!(testedValue instanceof Long) || !(minInclusive instanceof Long) || !(maxInclusive instanceof Long)) {
+    public static<T> boolean isLongInRange(Object testedValue, T minInclusive, T maxInclusive) {
+        if (!(minInclusive instanceof Long) || !(maxInclusive instanceof Long)) {
             throw new IllegalArgumentException("Arguments must be type Long");
         }
 
-        long testedValueCasted = (long)testedValue;
+        long testedValueCasted = Long.parseLong(String.valueOf(testedValue));
         long minValueCasted = (long)minInclusive;
         long maxValueCasted = (long)maxInclusive;
 
@@ -86,12 +93,12 @@ public class Helper {
         return testedValueCasted >= minValueCasted && testedValueCasted <= maxValueCasted;
     }
 
-    public static<T> boolean isDoubleInRange(T testedValue, T minInclusive, T maxInclusive) {
-        if (!(testedValue instanceof Double) || !(minInclusive instanceof Double) || !(maxInclusive instanceof Double)) {
+    public static<T> boolean isDoubleInRange(Object testedValue, T minInclusive, T maxInclusive) {
+        if (!(minInclusive instanceof Double) || !(maxInclusive instanceof Double)) {
             throw new IllegalArgumentException("Arguments must be type Double");
         }
 
-        double testedValueCasted = (double)testedValue;
+        double testedValueCasted = Double.parseDouble(String.valueOf(testedValue));
         double minValueCasted = (double)minInclusive;
         double maxValueCasted = (double)maxInclusive;
 

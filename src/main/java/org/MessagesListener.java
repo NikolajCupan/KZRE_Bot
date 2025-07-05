@@ -1,7 +1,6 @@
 package org;
 
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.action.Action;
@@ -27,15 +26,6 @@ public class MessagesListener extends ListenerAdapter {
         MessagesListener.REGISTERED_ACTION_HANDLERS.put(Action.QUOTE.toString(), new Quote());
     }
 
-    public static Set<String> getActionsModifiersKeywords() {
-        Set<String> keywords = new HashSet<>();
-        for (ActionHandler actionHandler : MessagesListener.REGISTERED_ACTION_HANDLERS.values()) {
-            keywords.addAll(actionHandler.getActionModifiersKeywords());
-        }
-
-        return keywords;
-    }
-
     @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
         if (Main.COMMAND_LINE_ARGUMENTS.contains(Constants.DEVELOPMENT_ARGUMENT)
@@ -47,14 +37,10 @@ public class MessagesListener extends ListenerAdapter {
             return;
         }
 
-        Message message = event.getMessage();
-        String content = message.getContentRaw();
-        if (!content.startsWith(ChatCommand.ACTION_PREFIX)) {
-            return;
-        }
+        String content = event.getMessage().getContentRaw();
 
-        ChatCommand chatCommand = new ChatCommand(content);
-        ActionHandler actionHandler = MessagesListener.REGISTERED_ACTION_HANDLERS.get(chatCommand.getChatAction());
+        ChatCommand chatCommand = new ChatCommand(content, MessagesListener.REGISTERED_ACTION_HANDLERS);
+        ActionHandler actionHandler = chatCommand.getAction();
         if (actionHandler == null) {
             return;
         }
@@ -69,6 +55,7 @@ public class MessagesListener extends ListenerAdapter {
 
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setColor(Color.BLACK);
+        embedBuilder.addField("dummy", "dummy", false);
 
         if (processingContext.hasErrorMessage()) {
             processingContext.getMessages(List.of(ProcessingContext.MessageType.ERROR)).forEach(element ->

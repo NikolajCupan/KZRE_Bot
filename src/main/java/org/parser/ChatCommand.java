@@ -1,53 +1,85 @@
 package org.parser;
 
 import org.Helper;
-import org.MessagesListener;
 import org.Modifier;
+import org.ProcessingContext;
+import org.action.ActionHandler;
+import org.exception.MissingArgumentException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.text.MessageFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ChatCommand {
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatCommand.class);
 
-    private static final Set<String> ACTIONS_MODIFIERS_KEYWORDS = MessagesListener.getActionsModifiersKeywords();
-    static {
-        ChatCommand.ACTIONS_MODIFIERS_KEYWORDS.add("VALUE");
-    }
-
     public static final String ACTION_PREFIX = "!";
     public static final String MODIFIER_PREFIX = "-";
 
-    private final String chatAction;
-    private final Map<String, List<String>> chatModifiers;
+    private ActionHandler actionFromChat = null;
+    private Map<Enum<?>, List<Helper.TypedValue>> modifiersFromChat = null;
 
-    public ChatCommand(String content) {
+    public ChatCommand(String content, Map<String, ActionHandler> registeredActionHandlers) {
         String[] tokens = content.split(" ");
+        if (tokens.length < 1) {
+            return;
+        }
 
-        this.chatAction = tokens[0].substring(ChatCommand.ACTION_PREFIX.length()).toUpperCase();
-        this.chatModifiers = new HashMap<>();
+        String firstToken = tokens[0].toUpperCase();
+        if (!firstToken.startsWith(ChatCommand.ACTION_PREFIX)) {
+            return;
+        }
+
+        String firstTokenAction = firstToken.substring(ChatCommand.ACTION_PREFIX.length());
+        if (!registeredActionHandlers.containsKey(firstTokenAction)) {
+            return;
+        }
+
+
+        this.actionFromChat = registeredActionHandlers.get(firstTokenAction);
+        this.modifiersFromChat = new HashMap<>();
+
+        Class<? extends Enum<?>> actionModifierEnum = this.actionFromChat.getActionModifierEnum();
+        Set<String> actionPossibleModifiers = Arrays.stream(actionModifierEnum.getEnumConstants()).map(Enum::toString).collect(Collectors.toSet());
+
 
         int tokenIndex = 1;
         while (tokenIndex < tokens.length) {
             String token = tokens[tokenIndex].toUpperCase();
 
             if (!token.startsWith(ChatCommand.MODIFIER_PREFIX) || token.length() < ChatCommand.MODIFIER_PREFIX.length() + 1) {
-                ChatCommand.LOGGER.warn("Ignored token \"{}\"", token);
+                ChatCommand.LOGGER.warn("Token \"{}\" was ignored", token);
                 ++tokenIndex;
                 continue;
             }
 
-            String modifier = token.substring(ChatCommand.MODIFIER_PREFIX.length());
+            String strModifier = token.substring(ChatCommand.MODIFIER_PREFIX.length());
+            if (!actionPossibleModifiers.contains(strModifier)) {
+                ChatCommand.LOGGER.warn("Token \"{}\" was ignored because it is not a valid modifier for action \"{}\"", token, this.actionFromChat.toString());
+                ++tokenIndex;
+                continue;
+            }
 
-            if (!modifier.equalsIgnoreCase("VALUE")) {
-                List<String> arguments = new ArrayList<>();
+
+            Enum<?> actionModifierEnumerator = this.actionFromChat.getActionModifierEnumerator(strModifier);
+            Modifier<? extends Enum<?>, ? extends Number> modifier = this.actionFromChat.getModifier(actionModifierEnumerator);
+            if (this.modifiersFromChat.containsKey(actionModifierEnumerator)) {
+                ChatCommand.LOGGER.warn("Modifier \"{}\" was ignored because it is already present", actionModifierEnumerator.toString());
+                ++tokenIndex;
+                continue;
+            }
+
+
+            if (!modifier.isConsumeRest()) {
+                Set<String> arguments = new LinkedHashSet<>();
 
                 int argumentIndex = tokenIndex + 1;
                 while (argumentIndex < tokens.length) {
                     String argument = tokens[argumentIndex].toUpperCase();
                     if (argument.startsWith(ChatCommand.MODIFIER_PREFIX)
-                            && ChatCommand.ACTIONS_MODIFIERS_KEYWORDS.contains(argument.substring(ChatCommand.MODIFIER_PREFIX.length()))) {
+                            && actionPossibleModifiers.contains(argument.substring(ChatCommand.MODIFIER_PREFIX.length()))) {
                         break;
                     }
 
@@ -56,7 +88,15 @@ public class ChatCommand {
                 }
 
                 arguments.removeIf(String::isBlank);
-                this.chatModifiers.put(modifier, arguments);
+                if (arguments.isEmpty()) {
+                    arguments.add("");
+                }
+
+                List<Helper.TypedValue> parsedArguments = new ArrayList<>();
+                for (String argument : arguments) {
+                    parsedArguments.add(ChatCommand.parseArgument(argument, modifier));
+                }
+                this.modifiersFromChat.putIfAbsent(actionModifierEnumerator, parsedArguments);
 
                 tokenIndex = argumentIndex;
             } else {
@@ -71,47 +111,128 @@ public class ChatCommand {
                     }
                 }
 
-                this.chatModifiers.put(modifier, List.of(stringBuilder.toString()));
+                this.modifiersFromChat.putIfAbsent(actionModifierEnumerator, List.of(ChatCommand.parseArgument(stringBuilder.toString(), modifier)));
+            }
+        }
+
+        for (String possibleModifier : actionPossibleModifiers) {
+            Enum<?> actionModifierEnumerator = this.actionFromChat.getActionModifierEnumerator(possibleModifier);
+            Modifier<? extends Enum<?>, ? extends Number> modifier = this.actionFromChat.getModifier(actionModifierEnumerator);
+
+            if (!this.modifiersFromChat.containsKey(actionModifierEnumerator)) {
+                this.modifiersFromChat.putIfAbsent(
+                        actionModifierEnumerator,
+                        List.of(new Helper.TypedValue(
+                            modifier.getDefaultArgumentType(), Helper.TypedValue.Resolution.MODIFIER_MISSING, modifier.getDefaultArgument(), modifier.getPossibleArgumentsEnumClass()
+                        ))
+                );
             }
         }
     }
 
-    public String getChatAction() {
-        return this.chatAction;
+    public ActionHandler getAction() {
+        return this.actionFromChat;
     }
 
-    public<T extends Enum<T>, U extends Enum<U>, V extends Number & Comparable<V>, W extends Enum<W>> W getArgumentAsEnum(Modifier<T, U, V> modifier, Class<W> requiredType) {
-        Helper.TypedValue argument = this.getArgument(modifier);
-        if (argument.type() != Helper.TypedValue.Type.ENUMERATOR) {
-            throw new RuntimeException("Argument is not enumerator");
+    public<T extends Enum<T>, U extends Enum<U>> U getFirstArgumentAsEnum(T modifier, Class<U> requiredEnumClass, ProcessingContext processingContext) {
+        List<Helper.TypedValue> arguments = this.modifiersFromChat.get(modifier);
+        Helper.TypedValue firstArgument = arguments.getFirst();
+
+        ChatCommand.addWarningIfMultipleArgumentsArePresent(modifier, arguments, processingContext);
+        ChatCommand.addWarningIfResolutionIsNotValidArgument(modifier, firstArgument, processingContext);
+
+        if (firstArgument.type() == Helper.TypedValue.Type.NULL) {
+            throw new MissingArgumentException(firstArgument.getStateMessage(modifier.toString(), false));
+        } else if (firstArgument.type() != Helper.TypedValue.Type.ENUMERATOR) {
+            throw new IllegalStateException("Argument is not enumerator");
         }
 
-        return requiredType.cast(Enum.valueOf(requiredType, argument.value()));
-    }
-
-    public<T extends Enum<T>, U extends Enum<U>, V extends Number & Comparable<V>> Helper.TypedValue getArgument(Modifier<T, U, V> modifier) {
-        if (!this.chatModifiers.containsKey(modifier.getModifier().toString())) {
-            return new Helper.TypedValue(
-                    modifier.getDefaultArgumentType(), Helper.TypedValue.Resolution.MODIFIER_MISSING, modifier.getDefaultArgument()
+        Class<? extends Enum<?>> actualType = firstArgument.enumClass();
+        if (actualType != requiredEnumClass) {
+            throw new IllegalArgumentException(
+                    MessageFormat.format("Actual enum type \"{0}\" and required enum type \"{1}\" are different", actualType, requiredEnumClass)
             );
         }
 
-        List<String> chatArguments = this.chatModifiers.get(modifier.getModifier().toString());
-        if (chatArguments.isEmpty() || chatArguments.getFirst().isBlank()) {
-            return new Helper.TypedValue(
-                    modifier.getDefaultArgumentType(), Helper.TypedValue.Resolution.ARGUMENT_MISSING, modifier.getDefaultArgument()
-            );
+        return requiredEnumClass.cast(Enum.valueOf(requiredEnumClass, firstArgument.value()));
+    }
+
+    public<T extends Enum<T>> Helper.TypedValue getFirstArgument(T modifier, boolean allowNullArgument, ProcessingContext processingContext) {
+        List<Helper.TypedValue> arguments = this.modifiersFromChat.get(modifier);
+        Helper.TypedValue firstArgument = arguments.getFirst();
+
+        ChatCommand.addWarningIfMultipleArgumentsArePresent(modifier, arguments, processingContext);
+        ChatCommand.addWarningIfResolutionIsNotValidArgument(modifier, firstArgument, processingContext);
+
+        if (!allowNullArgument) {
+            if (firstArgument.type() == Helper.TypedValue.Type.NULL) {
+                throw new MissingArgumentException(firstArgument.getStateMessage(modifier.toString(), false));
+            }
         }
 
-        String firstChatArgument = chatArguments.getFirst();
-        if (!modifier.isPossibleArgument(firstChatArgument)) {
-            return new Helper.TypedValue(
-                    modifier.getDefaultArgumentType(), Helper.TypedValue.Resolution.ARGUMENT_INVALID, modifier.getDefaultArgument()
+
+        return firstArgument;
+    }
+
+    public<T extends Enum<T>> Helper.TypedValue getFirstArgumentFirstWord(T modifier, boolean allowNullArgument, ProcessingContext processingContext) {
+        List<Helper.TypedValue> arguments = this.modifiersFromChat.get(modifier);
+        Helper.TypedValue firstArgument = arguments.getFirst();
+
+        ChatCommand.addWarningIfMultipleArgumentsArePresent(modifier, arguments, processingContext);
+        ChatCommand.addWarningIfResolutionIsNotValidArgument(modifier, firstArgument, processingContext);
+
+        if (!allowNullArgument) {
+            if (firstArgument.type() == Helper.TypedValue.Type.NULL) {
+                throw new MissingArgumentException(firstArgument.getStateMessage(modifier.toString(), false));
+            }
+        }
+
+        String firstArgumentFirstWord = firstArgument.valueFirstWord();
+        if (!firstArgumentFirstWord.equals(firstArgument.value())) {
+            processingContext.addMessages(
+                    MessageFormat.format("Argument for modifier \"{0}\" should not contain spaces, everything after first word was ignored", modifier.toString()),
+                    ProcessingContext.MessageType.WARNING
             );
         }
 
         return new Helper.TypedValue(
-                modifier.getChatArgumentType(firstChatArgument), Helper.TypedValue.Resolution.ARGUMENT_VALID, firstChatArgument
+            firstArgument.type(), firstArgument.resolution(), firstArgument.valueFirstWord(), firstArgument.enumClass()
+        );
+    }
+
+    private static<T extends Enum<T>> void addWarningIfMultipleArgumentsArePresent(T modifier, List<Helper.TypedValue> arguments, ProcessingContext processingContext) {
+        if (arguments.size() > 1) {
+            processingContext.addMessages(
+                    MessageFormat.format("Multiple arguments for modifier \"{0}\" found, everything after first argument was ignored", modifier),
+                    ProcessingContext.MessageType.WARNING
+            );
+        }
+    }
+
+    private static<T extends Enum<T>> void addWarningIfResolutionIsNotValidArgument(T modifier, Helper.TypedValue argument, ProcessingContext processingContext) {
+        if (argument.resolution() != Helper.TypedValue.Resolution.ARGUMENT_VALID) {
+            processingContext.addMessages(
+                    argument.getStateMessage(modifier.toString(), true),
+                    ProcessingContext.MessageType.WARNING
+            );
+        }
+    }
+
+    private static Helper.TypedValue parseArgument(String argument, Modifier<? extends Enum<?>, ? extends Number> modifier) {
+        if (argument.isBlank()) {
+            return new Helper.TypedValue(
+                    modifier.getDefaultArgumentType(), Helper.TypedValue.Resolution.ARGUMENT_MISSING, modifier.getDefaultArgument(), modifier.getPossibleArgumentsEnumClass()
+            );
+        }
+
+        if (!modifier.isPossibleArgument(argument)) {
+            return new Helper.TypedValue(
+                    modifier.getDefaultArgumentType(), Helper.TypedValue.Resolution.ARGUMENT_INVALID, modifier.getDefaultArgument(), modifier.getPossibleArgumentsEnumClass()
+            );
+        }
+
+        return new Helper.TypedValue(
+                modifier.getChatArgumentType(argument), Helper.TypedValue.Resolution.ARGUMENT_VALID, argument, modifier.getPossibleArgumentsEnumClass()
         );
     }
 }
