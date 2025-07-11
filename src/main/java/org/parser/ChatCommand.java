@@ -416,20 +416,6 @@ public class ChatCommand {
             throw new IllegalStateException("Modifier is not a switch modifier");
         }
 
-        if (arguments.stream().anyMatch(element -> element.getResolution() != Helper.TypedValue.Resolution.ARGUMENT_MISSING)) {
-            StringBuilder stringBuilder = new StringBuilder();
-            arguments.forEach(element -> {
-                element.setUsed();
-                stringBuilder.append("\"").append(element.getRawValue()).append("\", ");
-            });
-
-            stringBuilder.setLength(stringBuilder.length() - 2);
-            processingContext.addMessages(
-                    MessageFormat.format("Modifier \"{0}\" is a switch modifier, it should not be provided with any arguments, arguments were ignored: [{1}]", modifier, stringBuilder.toString()),
-                    ProcessingContext.MessageType.WARNING
-            );
-        }
-
         return true;
     }
 

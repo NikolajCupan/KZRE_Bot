@@ -100,6 +100,7 @@ public class MessagesListener extends ListenerAdapter {
 
             boolean modifierAccessed = accessedModifiers.contains(key);
             boolean modifierAddedAfterParsing = addedAfterParsingModifiers.contains(key);
+            boolean modifierIsSwitch = arguments.getFirst().getType() == Helper.TypedValue.Type.SWITCH;
 
             StringBuilder stringBuilder = new StringBuilder();
             if (!unusedArguments.isEmpty()) {
@@ -109,10 +110,21 @@ public class MessagesListener extends ListenerAdapter {
 
             if (!modifierAccessed) {
                 if (!modifierAddedAfterParsing && !unusedArguments.isEmpty()) {
-                    processingContext.addMessages(
-                            MessageFormat.format("Modifier \"{0}\" and its arguments [{1}] were not used", key, stringBuilder.toString()),
-                            ProcessingContext.MessageType.WARNING
-                    );
+                    if (modifierIsSwitch) {
+                        processingContext.addMessages(
+                                MessageFormat.format(
+                                        "Modifier \"{0}\" and its arguments [{1}] were not used, additionally \"{0}\" is a switch modifier and should not be provided with any arguments",
+                                        key,
+                                        stringBuilder.toString()
+                                ),
+                                ProcessingContext.MessageType.WARNING
+                        );
+                    } else {
+                        processingContext.addMessages(
+                                MessageFormat.format("Modifier \"{0}\" and its arguments [{1}] were not used", key, stringBuilder.toString()),
+                                ProcessingContext.MessageType.WARNING
+                        );
+                    }
                 } else if (!modifierAddedAfterParsing) {
                     processingContext.addMessages(
                             MessageFormat.format("Modifier \"{0}\" was not used", key),
@@ -120,10 +132,17 @@ public class MessagesListener extends ListenerAdapter {
                     );
                 }
             } else if (!unusedArguments.isEmpty()) {
-                processingContext.addMessages(
-                        MessageFormat.format("Not all arguments for modifier \"{0}\" were used, the unused arguments are: [{1}]", key, stringBuilder.toString()),
-                        ProcessingContext.MessageType.WARNING
-                );
+                if (modifierIsSwitch) {
+                    processingContext.addMessages(
+                            MessageFormat.format("Modifier \"{0}\" is a switch modifier, it should not be provided with any arguments, arguments were ignored: [{1}]", key, stringBuilder.toString()),
+                            ProcessingContext.MessageType.WARNING
+                    );
+                } else {
+                    processingContext.addMessages(
+                            MessageFormat.format("Not all arguments for modifier \"{0}\" were used, the unused arguments are: [{1}]", key, stringBuilder.toString()),
+                            ProcessingContext.MessageType.WARNING
+                    );
+                }
             }
         }
     }
