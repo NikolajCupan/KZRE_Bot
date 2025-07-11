@@ -10,7 +10,6 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
     private final String defaultArgument;
     private final Helper.TypedValue.Type defaultArgumentType;
 
-    private final boolean consumeRest;
     private final boolean argumentCanBeAnyString;
     private final boolean argumentCanBeDecimalNumber;
     private final boolean argumentCanBeWholeNumber;
@@ -22,7 +21,6 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
     public <V> Modifier(
             Class<T> possibleArgumentsEnumClass,
             V defaultArgument,
-            boolean consumeRest,
             boolean argumentCanBeAnyString,
             boolean argumentCanBeDecimalNumber,
             boolean argumentCanBeWholeNumber,
@@ -71,7 +69,6 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
         }
 
 
-        this.consumeRest = consumeRest;
         this.argumentCanBeAnyString = argumentCanBeAnyString;
         this.argumentCanBeDecimalNumber = argumentCanBeDecimalNumber;
         this.argumentCanBeWholeNumber = argumentCanBeWholeNumber;
@@ -85,8 +82,9 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
         this.maxInclusive = maxInclusive;
 
 
-        if (this.isSwitchModifier && this.consumeRest) {
-            throw new IllegalArgumentException("Switch modifier cannot use consume rest option");
+        if (this.isSwitchModifier
+                && (this.argumentCanBeAnyString || this.argumentCanBeDecimalNumber || this.argumentCanBeWholeNumber)) {
+            throw new IllegalArgumentException("Switch modifier cannot use any string / decimal number / whole number options");
         }
         if (this.isSwitchModifier
                 && (this.possibleArgumentsEnumClass != Helper.EmptyEnum.class || this.possibleArgumentsEnumClass.getEnumConstants().length != 0)) {
@@ -104,10 +102,6 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
 
     public Helper.TypedValue.Type getDefaultArgumentType() {
         return this.defaultArgumentType;
-    }
-
-    public boolean isConsumeRest() {
-        return this.consumeRest;
     }
 
     public boolean isSwitchModifier() {

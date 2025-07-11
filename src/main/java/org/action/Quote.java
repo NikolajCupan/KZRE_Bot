@@ -30,23 +30,23 @@ public class Quote extends ActionHandler {
     static {
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.TYPE,
-                new Modifier<>(TypeArgument.class, null, false, false, false, false, false, null, null)
+                new Modifier<>(TypeArgument.class, null, false, false, false, false, null, null)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.TAG,
-                new Modifier<>(Helper.EmptyEnum.class, null, false, true, false, false, false, null, null)
+                new Modifier<>(Helper.EmptyEnum.class, null, true, false, false, false, null, null)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.ORDER,
-                new Modifier<>(OrderArgument.class, OrderArgument.RANDOM, false, false, false, false, false, null, null)
+                new Modifier<>(OrderArgument.class, OrderArgument.RANDOM, false, false, false, false, null, null)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.COUNT,
-                new Modifier<>(CountArgument.class, 5L, false, false, false, true, false, 1L, Long.MAX_VALUE)
+                new Modifier<>(CountArgument.class, 5L, false, false, true, false, 1L, Long.MAX_VALUE)
         );
         Quote.ACTION_MODIFIERS.put(
                 ActionModifier.VALUE,
-                new Modifier<>(Helper.EmptyEnum.class, null, true, true, false, false, false, null, null)
+                new Modifier<>(Helper.EmptyEnum.class, null, true, false, false, false, null, null)
         );
     }
 

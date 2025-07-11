@@ -23,7 +23,7 @@ public class MessagesListener extends ListenerAdapter {
     private static final GuildManager GUILD_MANAGER = new GuildManager();
 
     static {
-        MessagesListener.REGISTERED_ACTION_HANDLERS.put(Action.QUOTE.toString(), new Quote());
+        MessagesListener.REGISTERED_ACTION_HANDLERS.put(Action.QUOTE.toString().toUpperCase(), new Quote());
     }
 
     @Override
@@ -37,36 +37,49 @@ public class MessagesListener extends ListenerAdapter {
             return;
         }
 
-        String content = event.getMessage().getContentRaw();
 
-        ChatCommand chatCommand = new ChatCommand(content, MessagesListener.REGISTERED_ACTION_HANDLERS);
+        ProcessingContext processingContext = new ProcessingContext();
+        ChatCommand chatCommand = new ChatCommand(event.getMessage(), MessagesListener.REGISTERED_ACTION_HANDLERS, processingContext);
         ActionHandler actionHandler = chatCommand.getAction();
         if (actionHandler == null) {
             return;
         }
 
-        MessagesListener.LOGGER.info("Received action \"{}\"", content);
+
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+        embedBuilder.setColor(Color.BLACK);
+
+        if (processingContext.hasParsingErrorMessage()) {
+            processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_ERROR)).forEach(element ->
+                    embedBuilder.addField(element.messageType().toString(), element.message(), false)
+            );
+            return;
+        }
+
+        processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_WARNING)).forEach(element ->
+                embedBuilder.addField(element.messageType().toString(), element.message(), false)
+        );
+
+        
+        MessagesListener.LOGGER.info("Received action \"{}\"", event.getMessage().getContentRaw());
 
         MessagesListener.USER_MANAGER.refreshUser(event);
         MessagesListener.GUILD_MANAGER.refreshGuild(event);
 
-        ProcessingContext processingContext = new ProcessingContext();
         actionHandler.executeAction(event, chatCommand, processingContext);
-
-        EmbedBuilder embedBuilder = new EmbedBuilder();
-        embedBuilder.setColor(Color.BLACK);
-        embedBuilder.addField("dummy", "dummy", false);
 
         if (processingContext.hasErrorMessage()) {
             processingContext.getMessages(List.of(ProcessingContext.MessageType.ERROR)).forEach(element ->
-                    embedBuilder.addField(ProcessingContext.MessageType.ERROR.toString(), element.message(), false)
+                    embedBuilder.addField(element.messageType().toString(), element.message(), false)
             );
         } else {
-            processingContext.getMessages(List.of(ProcessingContext.MessageType.RESULT, ProcessingContext.MessageType.SUCCESS, ProcessingContext.MessageType.WARNING)).forEach(element ->
+            processingContext.getMessages(List.of(ProcessingContext.MessageType.RESULT, ProcessingContext.MessageType.SUCCESS, ProcessingContext.MessageType.WARNING, ProcessingContext.MessageType.PARSING_WARNING)).forEach(element ->
                     embedBuilder.addField(element.messageType().toString(), element.message(), false)
             );
         }
 
-        event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
+        if (!embedBuilder.isEmpty()) {
+            event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
+        }
     }
 }
