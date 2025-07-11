@@ -23,7 +23,8 @@ public class IndexedMessage {
     }
 
     public Quartet<Integer, Integer, String, List<TypedCharacter>> getTokenStartingFromIndex(int index) {
-        if (index >= this.typedCharacters.size()) {
+        if (index >= this.typedCharacters.size()
+                || (index == this.typedCharacters.size() - 1 &&  this.typedCharacters.get(index).characterType == TypedCharacter.CharacterType.SENTENCE_END)) {
             return null;
         }
 

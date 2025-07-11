@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.*;
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.List;
 
@@ -67,19 +68,63 @@ public class MessagesListener extends ListenerAdapter {
         MessagesListener.GUILD_MANAGER.refreshGuild(event);
 
         actionHandler.executeAction(event, chatCommand, processingContext);
+        MessagesListener.addWarningsAboutUnusedModifiersAndArguments(chatCommand, processingContext);
 
         if (processingContext.hasErrorMessage()) {
             processingContext.getMessages(List.of(ProcessingContext.MessageType.ERROR)).forEach(element ->
                     embedBuilder.addField(element.messageType().toString(), element.message(), false)
             );
         } else {
-            processingContext.getMessages(List.of(ProcessingContext.MessageType.RESULT, ProcessingContext.MessageType.SUCCESS, ProcessingContext.MessageType.WARNING, ProcessingContext.MessageType.PARSING_WARNING)).forEach(element ->
+            processingContext.getMessages(List.of(ProcessingContext.MessageType.RESULT, ProcessingContext.MessageType.SUCCESS, ProcessingContext.MessageType.WARNING)).forEach(element ->
                     embedBuilder.addField(element.messageType().toString(), element.message(), false)
             );
         }
 
         if (!embedBuilder.isEmpty()) {
             event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
+        }
+    }
+
+    private static void addWarningsAboutUnusedModifiersAndArguments(ChatCommand chatCommand, ProcessingContext processingContext) {
+        Map<Enum<?>, List<Helper.TypedValue>> modifiers = chatCommand.getModifierMap().getModifiers();
+        Set<Enum<?>> accessedModifiers = chatCommand.getModifierMap().getAccessedModifiers();
+        Set<Enum<?>> addedAfterParsingModifiers = chatCommand.getModifierMap().getAddedAfterParsingModifiers();
+
+        for (Enum<?> key : modifiers.keySet()) {
+            List<Helper.TypedValue> arguments = modifiers.get(key);
+            List<Helper.TypedValue> unusedArguments = arguments.stream()
+                    .filter(element -> !element.isUsed()
+                            && element.getResolution() != Helper.TypedValue.Resolution.MODIFIER_MISSING
+                            && element.getResolution() != Helper.TypedValue.Resolution.ARGUMENT_MISSING)
+                    .toList();
+
+            boolean modifierAccessed = accessedModifiers.contains(key);
+            boolean modifierAddedAfterParsing = addedAfterParsingModifiers.contains(key);
+
+            StringBuilder stringBuilder = new StringBuilder();
+            if (!unusedArguments.isEmpty()) {
+                unusedArguments.forEach(element -> stringBuilder.append("\"").append(element.getRawValue()).append("\", "));
+                stringBuilder.setLength(stringBuilder.length() - 2);
+            }
+
+            if (!modifierAccessed) {
+                if (!modifierAddedAfterParsing && !unusedArguments.isEmpty()) {
+                    processingContext.addMessages(
+                            MessageFormat.format("Modifier \"{0}\" and its arguments [{1}] were not used", key, stringBuilder.toString()),
+                            ProcessingContext.MessageType.WARNING
+                    );
+                } else if (!modifierAddedAfterParsing) {
+                    processingContext.addMessages(
+                            MessageFormat.format("Modifier \"{0}\" was not used", key),
+                            ProcessingContext.MessageType.WARNING
+                    );
+                }
+            } else if (!unusedArguments.isEmpty()) {
+                processingContext.addMessages(
+                        MessageFormat.format("Not all arguments for modifier \"{0}\" were used, the unused arguments are: [{1}]", key, stringBuilder.toString()),
+                        ProcessingContext.MessageType.WARNING
+                );
+            }
         }
     }
 }

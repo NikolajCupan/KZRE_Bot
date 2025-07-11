@@ -73,7 +73,7 @@ public class Quote extends ActionHandler {
     @Override
     public void executeAction(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         try {
-            TypeArgument typeArgument = chatCommand.getFirstArgumentAsEnum(ActionModifier.TYPE, TypeArgument.class, processingContext);
+            TypeArgument typeArgument = chatCommand.getFirstArgumentAsEnum(ActionModifier.TYPE, TypeArgument.class, true, processingContext);
 
             switch (typeArgument) {
                 case TypeArgument.GET_QUOTE -> this.handleGetQuote(event, chatCommand, processingContext);
@@ -90,12 +90,12 @@ public class Quote extends ActionHandler {
     }
 
     private void handleGetTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
-        OrderArgument chatOrder = chatCommand.getFirstArgumentAsEnum(ActionModifier.ORDER, OrderArgument.class, processingContext);
-        Helper.TypedValue chatCount = chatCommand.getFirstArgument(ActionModifier.COUNT, false, processingContext);
+        OrderArgument chatOrder = chatCommand.getFirstArgumentAsEnum(ActionModifier.ORDER, OrderArgument.class, true, processingContext);
+        Helper.TypedValue chatCount = chatCommand.getFirstArgument(ActionModifier.COUNT, false, true, processingContext);
 
         long resultsCount = Long.MAX_VALUE;
-        if (chatCount.type() == Helper.TypedValue.Type.WHOLE_NUMBER) {
-            resultsCount = Long.parseLong(chatCount.value());
+        if (chatCount.getType() == Helper.TypedValue.Type.WHOLE_NUMBER) {
+            resultsCount = Long.parseLong(chatCount.getUsedValue());
         }
 
 
@@ -136,29 +136,22 @@ public class Quote extends ActionHandler {
     }
 
     private void handleNewTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
-        Helper.TypedValue chatNewTag = chatCommand.getFirstArgumentFirstWord(ActionModifier.VALUE, false, processingContext);
-        if (chatNewTag.value().startsWith(ChatCommand.MODIFIER_PREFIX)) {
-            processingContext.addMessages(
-                    MessageFormat.format("Tag cannot start with the \"{0}\" character", ChatCommand.MODIFIER_PREFIX),
-                    ProcessingContext.MessageType.ERROR
-            );
-            return;
-        }
+        Helper.TypedValue chatNewTag = chatCommand.getFirstArgument(ActionModifier.VALUE, false, true, processingContext);
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
 
         try {
-            TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewTag.value());
+            TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewTag.getUsedValue());
             session.persist(newTag);
 
             processingContext.addMessages(
-                    MessageFormat.format("New tag \"{0}\" was successfully created", chatNewTag.value()),
+                    MessageFormat.format("New tag \"{0}\" was successfully created", chatNewTag.getUsedValue()),
                     ProcessingContext.MessageType.SUCCESS
             );
         } catch (ConstraintViolationException exception) {
             processingContext.addMessages(
-                    MessageFormat.format("Tag \"{0}\" already exists", chatNewTag.value()),
+                    MessageFormat.format("Tag \"{0}\" already exists", chatNewTag.getUsedValue()),
                     ProcessingContext.MessageType.ERROR
             );
         } finally {

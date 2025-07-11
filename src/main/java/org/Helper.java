@@ -2,26 +2,58 @@ package org;
 
 import org.exception.InvalidArgumentException;
 import org.exception.MissingArgumentException;
-import org.jetbrains.annotations.NotNull;
 
 import java.text.MessageFormat;
 
 public class Helper {
-    public record TypedValue(Helper.TypedValue.Type type, Helper.TypedValue.Resolution resolution, String value, Class<? extends Enum<?>> enumClass) {
+    public static class TypedValue {
         public enum Type { STRING, WHOLE_NUMBER, DECIMAL_NUMBER, ENUMERATOR, SWITCH, NULL }
         public enum Resolution { MODIFIER_MISSING, ARGUMENT_MISSING, ARGUMENT_INVALID, ARGUMENT_VALID }
 
-        public String valueFirstWord() {
-            if (this.value.isBlank()) {
-                return "";
-            }
+        private final Helper.TypedValue.Type type;
+        private final Helper.TypedValue.Resolution resolution;
+        private final String usedValue;
+        private final String rawValue;
+        private final Class<? extends Enum<?>> enumClass;
 
-            int spaceIndex = this.value.indexOf(' ');
-            if (spaceIndex == -1) {
-                return this.value;
-            }
+        private boolean used;
 
-            return this.value.substring(0, spaceIndex);
+        public TypedValue(TypedValue.Type type, TypedValue.Resolution resolution, String usedValue, String rawValue, Class<? extends Enum<?>> enumClass) {
+            this.type = type;
+            this.resolution = resolution;
+            this.usedValue = usedValue;
+            this.rawValue = rawValue;
+            this.enumClass = enumClass;
+
+            this.used = false;
+        }
+
+        public Helper.TypedValue.Type getType() {
+            return this.type;
+        }
+
+        public Helper.TypedValue.Resolution getResolution() {
+            return this.resolution;
+        }
+
+        public String getUsedValue() {
+            return this.usedValue;
+        }
+
+        public String getRawValue() {
+            return this.rawValue;
+        }
+
+        public Class<? extends Enum<?>> getEnumClass() {
+            return this.enumClass;
+        }
+
+        public boolean isUsed() {
+            return this.used;
+        }
+
+        public void setUsed() {
+            this.used = true;
         }
 
         public String getStateMessage(String modifierName, boolean includeDefaultValueUsage) {
@@ -29,21 +61,15 @@ public class Helper {
             switch (this.resolution) {
                 case MODIFIER_MISSING -> message = MessageFormat.format("Modifier \"{0}\" was not found", modifierName);
                 case ARGUMENT_MISSING -> message = MessageFormat.format("Argument for modifier \"{0}\" was not found", modifierName);
-                case ARGUMENT_INVALID -> message = MessageFormat.format("Argument for modifier \"{0}\" is not valid", modifierName);
+                case ARGUMENT_INVALID -> message = MessageFormat.format("Argument \"{0}\" for modifier \"{1}\" is not valid", this.rawValue, modifierName);
                 case ARGUMENT_VALID -> throw new IllegalStateException(MessageFormat.format("Cannot generate state message when resolution is set to\"{0}\"", this.resolution));
             };
 
             if (includeDefaultValueUsage && this.type != Type.NULL) {
-                message += MessageFormat.format(", default value \"{0}\" was used instead", this.value);
+                message += MessageFormat.format(", default value \"{0}\" was used instead", this.usedValue);
             }
 
             return message;
-        }
-
-        @NotNull
-        @Override
-        public String toString() {
-            return "[" + this.type.toString() + ": " + this.value + "]";
         }
     }
 

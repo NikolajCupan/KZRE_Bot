@@ -109,6 +109,8 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
     }
 
     public boolean isPossibleArgument(String chatArgument) {
+        chatArgument = chatArgument.toUpperCase();
+
         if (this.argumentCanBeAnyString) {
             return true;
         } else if (this.argumentCanBeDecimalNumber && Helper.isDecimal(chatArgument)
@@ -123,6 +125,8 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
     }
 
     public Helper.TypedValue.Type getChatArgumentType(String chatArgument) {
+        chatArgument = chatArgument.toUpperCase();
+
         if (this.possibleArguments.contains(chatArgument)) {
             return Helper.TypedValue.Type.ENUMERATOR;
         } else if (this.argumentCanBeWholeNumber && Helper.isWholeNumber(chatArgument)
