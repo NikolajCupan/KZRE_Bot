@@ -50,9 +50,18 @@ public class ChatCommand {
                 indexedMessage.getTokenStartingFromIndex(0);
 
         while (indexedToken != null) {
+            if (indexedToken.getValue2().isEmpty()) {
+                processingContext.addMessages(
+                        "Empty token [\"\"] detected, it was ignored",
+                        ProcessingContext.MessageType.PARSING_WARNING
+                );
+
+                indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.getValue1());
+                continue;
+            }
+
             IndexedMessage.TypedCharacter firstC = indexedToken.getValue3().getFirst();
-            if ((indexedToken.getValue2().equals("\"\"") && indexedToken.getValue3().getFirst().characterType() == IndexedMessage.TypedCharacter.CharacterType.SENTENCE_START)
-                    || firstC.characterType() == IndexedMessage.TypedCharacter.CharacterType.LITERAL
+            if (firstC.characterType() == IndexedMessage.TypedCharacter.CharacterType.LITERAL
                     || firstC.characterType() == IndexedMessage.TypedCharacter.CharacterType.SENTENCE_START) {
                 processingContext.addMessages(
                         MessageFormat.format("Token \"{0}\" was ignored", indexedToken.getValue2()),
@@ -100,14 +109,20 @@ public class ChatCommand {
             List<String> arguments = new ArrayList<>();
             while (true) {
                 indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.getValue1());
+
                 if (indexedToken == null) {
                     break;
                 } else if (indexedToken.getValue3().getFirst().characterType() == IndexedMessage.TypedCharacter.CharacterType.MODIFIER
                         && actionPossibleModifiers.contains(indexedToken.getValue2().substring(ChatCommand.MODIFIER_PREFIX.length()).toUpperCase())) {
                     break;
+                } else if (indexedToken.getValue2().isEmpty()) {
+                    processingContext.addMessages(
+                            "Empty token [\"\"] detected, it was ignored",
+                            ProcessingContext.MessageType.PARSING_WARNING
+                    );
+                } else {
+                    arguments.add(indexedToken.getValue2());
                 }
-
-                arguments.add(indexedToken.getValue2());
             }
 
             if (!modifier.isSwitchModifier() && arguments.isEmpty()) {
@@ -135,6 +150,21 @@ public class ChatCommand {
                 );
             }
         }
+
+
+        StringBuilder stringBuilder = new StringBuilder();
+        indexedMessage.getTypedCharacters().forEach(element -> {
+            if (element.characterType() == IndexedMessage.TypedCharacter.CharacterType.LITERAL) {
+                stringBuilder.append(element.character());
+            } else {
+                stringBuilder.append("`").append(element.character()).append("`");
+            }
+        });
+
+        processingContext.addMessages(
+                stringBuilder.toString(),
+                ProcessingContext.MessageType.DEBUG
+        );
     }
 
     private static boolean isValidAction(String content, Map<String, ActionHandler> registeredActionHandlers) {
@@ -403,14 +433,16 @@ public class ChatCommand {
         return this.modifierMap;
     }
 
-    public<T extends Enum<T>> boolean isSwitchModifierPresent(T modifier, ProcessingContext processingContext) {
-        List<Helper.TypedValue> arguments = this.modifierMap.get(modifier);
-        if (arguments == null || arguments.isEmpty()) {
+    public<T extends Enum<T>> boolean isSwitchModifierPresent(T modifier) {
+        if (!this.modifierMap.containsKey(modifier)) {
             return false;
         }
 
-        if (arguments.stream().anyMatch(element -> element.getType() != Helper.TypedValue.Type.SWITCH)) {
-            throw new IllegalStateException("Modifier is not a switch modifier");
+        List<Helper.TypedValue> arguments = this.modifierMap.get(modifier);
+        if (arguments != null && !arguments.isEmpty()) {
+            if (arguments.stream().anyMatch(element -> element.getType() != Helper.TypedValue.Type.SWITCH)) {
+                throw new IllegalStateException("Modifier is not a switch modifier");
+            }
         }
 
         return true;

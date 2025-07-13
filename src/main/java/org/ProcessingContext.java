@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class ProcessingContext {
-    public enum MessageType { RESULT, SUCCESS, WARNING, PARSING_WARNING, ERROR, PARSING_ERROR }
+    public enum MessageType { DEBUG, RESULT, WARNING, PARSING_WARNING, ERROR, PARSING_ERROR }
     public record Message(String message, MessageType messageType) {}
 
     private final List<Message> messages;

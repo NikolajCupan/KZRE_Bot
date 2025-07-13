@@ -54,31 +54,45 @@ public class MessagesListener extends ListenerAdapter {
             processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_ERROR)).forEach(element ->
                     embedBuilder.addField(element.messageType().toString(), element.message(), false)
             );
-            return;
-        }
-
-        processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_WARNING)).forEach(element ->
-                embedBuilder.addField(element.messageType().toString(), element.message(), false)
-        );
-
-        
-        MessagesListener.LOGGER.info("Received action \"{}\"", event.getMessage().getContentRaw());
-
-        MessagesListener.USER_MANAGER.refreshUser(event);
-        MessagesListener.GUILD_MANAGER.refreshGuild(event);
-
-        actionHandler.executeAction(event, chatCommand, processingContext);
-        MessagesListener.addWarningsAboutUnusedModifiersAndArguments(chatCommand, processingContext);
-
-        if (processingContext.hasErrorMessage()) {
-            processingContext.getMessages(List.of(ProcessingContext.MessageType.ERROR)).forEach(element ->
-                    embedBuilder.addField(element.messageType().toString(), element.message(), false)
-            );
         } else {
-            processingContext.getMessages(List.of(ProcessingContext.MessageType.RESULT, ProcessingContext.MessageType.SUCCESS, ProcessingContext.MessageType.WARNING)).forEach(element ->
-                    embedBuilder.addField(element.messageType().toString(), element.message(), false)
-            );
+            if (chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.VERBOSE)) {
+                processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_WARNING)).forEach(element ->
+                        embedBuilder.addField(element.messageType().toString(), element.message(), false)
+                );
+            }
+
+
+            MessagesListener.LOGGER.info("Received action \"{}\"", event.getMessage().getContentRaw());
+
+            MessagesListener.USER_MANAGER.refreshUser(event);
+            MessagesListener.GUILD_MANAGER.refreshGuild(event);
+
+            actionHandler.executeAction(event, chatCommand, processingContext);
+            MessagesListener.addWarningsAboutUnusedModifiersAndArguments(chatCommand, processingContext);
+
+            if (processingContext.hasErrorMessage()) {
+                processingContext.getMessages(List.of(ProcessingContext.MessageType.ERROR)).forEach(element ->
+                        embedBuilder.addField(element.messageType().toString(), element.message(), false)
+                );
+            } else {
+                processingContext.getMessages(List.of(ProcessingContext.MessageType.RESULT)).forEach(element ->
+                        embedBuilder.addField(element.messageType().toString(), element.message(), false)
+                );
+
+                if (chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.VERBOSE)) {
+                    processingContext.getMessages(List.of(ProcessingContext.MessageType.WARNING)).forEach(element ->
+                            embedBuilder.addField(element.messageType().toString(), element.message(), false)
+                    );
+                }
+
+                if (chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.DEBUG)) {
+                    processingContext.getMessages(List.of(ProcessingContext.MessageType.DEBUG)).forEach(element ->
+                            embedBuilder.addField(element.messageType().toString(), element.message(), false)
+                    );
+                }
+            }
         }
+
 
         if (!embedBuilder.isEmpty()) {
             event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();

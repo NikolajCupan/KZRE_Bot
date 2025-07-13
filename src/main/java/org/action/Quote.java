@@ -135,7 +135,7 @@ public class Quote extends ActionHandler {
 
             processingContext.addMessages(
                     MessageFormat.format("New tag \"{0}\" was successfully created", chatNewTag.getUsedValue()),
-                    ProcessingContext.MessageType.SUCCESS
+                    ProcessingContext.MessageType.RESULT
             );
         } catch (ConstraintViolationException exception) {
             processingContext.addMessages(
