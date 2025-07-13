@@ -110,7 +110,7 @@ public class ChatCommand {
                 arguments.add(indexedToken.getValue2());
             }
 
-            if (arguments.isEmpty()) {
+            if (!modifier.isSwitchModifier() && arguments.isEmpty()) {
                 arguments.add("");
             }
 

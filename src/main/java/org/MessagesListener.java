@@ -100,7 +100,7 @@ public class MessagesListener extends ListenerAdapter {
 
             boolean modifierAccessed = accessedModifiers.contains(key);
             boolean modifierAddedAfterParsing = addedAfterParsingModifiers.contains(key);
-            boolean modifierIsSwitch = arguments.getFirst().getType() == Helper.TypedValue.Type.SWITCH;
+            boolean modifierIsSwitch = arguments.isEmpty() || arguments.getFirst().getType() == Helper.TypedValue.Type.SWITCH;
 
             StringBuilder stringBuilder = new StringBuilder();
             if (!unusedArguments.isEmpty()) {
