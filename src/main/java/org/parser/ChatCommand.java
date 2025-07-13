@@ -13,7 +13,6 @@ import org.javatuples.Quartet;
 
 import java.text.MessageFormat;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class ChatCommand {
     private static final String ACTION_PREFIX = "!";
@@ -44,9 +43,7 @@ public class ChatCommand {
 
 
         this.modifierMap = new ModifierMap();
-
-        Class<? extends Enum<?>> actionModifierEnum = this.action.getActionModifierEnum();
-        Set<String> actionPossibleModifiers = Arrays.stream(actionModifierEnum.getEnumConstants()).map(Enum::toString).collect(Collectors.toSet());
+        Set<String> actionPossibleModifiers = this.action.getActionPossibleModifiers();
 
         assert indexedMessage != null;
         Quartet<Integer, Integer, String, List<IndexedMessage.TypedCharacter>> indexedToken =

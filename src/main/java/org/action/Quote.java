@@ -23,28 +23,26 @@ public class Quote extends ActionHandler {
     private enum OrderArgument { RANDOM, NEWEST, OLDEST }
     private enum CountArgument { ALL }
 
-    private static final Action action = Action.QUOTE;
-    private static final Map<ActionModifier, Modifier<? extends Enum<?>, ? extends Number>> ACTION_MODIFIERS =
-            new EnumMap<>(ActionModifier.class);
+    private static final Action ACTION = Action.QUOTE;
 
     static {
-        Quote.ACTION_MODIFIERS.put(
+        ActionHandler.ACTION_MODIFIERS.put(
                 ActionModifier.TYPE,
                 new Modifier<>(TypeArgument.class, null, false, false, false, false, null, null)
         );
-        Quote.ACTION_MODIFIERS.put(
+        ActionHandler.ACTION_MODIFIERS.put(
                 ActionModifier.TAG,
                 new Modifier<>(Helper.EmptyEnum.class, null, true, false, false, false, null, null)
         );
-        Quote.ACTION_MODIFIERS.put(
+        ActionHandler.ACTION_MODIFIERS.put(
                 ActionModifier.ORDER,
                 new Modifier<>(OrderArgument.class, OrderArgument.RANDOM, false, false, false, false, null, null)
         );
-        Quote.ACTION_MODIFIERS.put(
+        ActionHandler.ACTION_MODIFIERS.put(
                 ActionModifier.COUNT,
                 new Modifier<>(CountArgument.class, 5L, false, false, true, false, 1L, Long.MAX_VALUE)
         );
-        Quote.ACTION_MODIFIERS.put(
+        ActionHandler.ACTION_MODIFIERS.put(
                 ActionModifier.VALUE,
                 new Modifier<>(Helper.EmptyEnum.class, null, true, false, false, false, null, null)
         );
@@ -52,21 +50,11 @@ public class Quote extends ActionHandler {
 
     @Override
     public Action getAction() {
-        return Quote.action;
+        return Quote.ACTION;
     }
 
     @Override
-    public Enum<?> getActionModifierEnumerator(String strModifier) {
-        return Enum.valueOf(ActionModifier.class, strModifier);
-    }
-
-    @Override
-    public Modifier<? extends Enum<?>, ? extends Number> getModifier(Enum<?> actionModifier) {
-        return Quote.ACTION_MODIFIERS.get(actionModifier);
-    }
-
-    @Override
-    public Class<? extends Enum<?>> getActionModifierEnum() {
+    protected Class<? extends Enum<?>> getActionModifierEnumClass() {
         return ActionModifier.class;
     }
 
