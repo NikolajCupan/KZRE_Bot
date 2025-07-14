@@ -94,7 +94,7 @@ public class Quote extends ActionHandler {
                     .getResultList();
 
             if (tags.isEmpty()) {
-                processingContext.addMessages("No tags found", ProcessingContext.MessageType.WARNING);
+                processingContext.addMessages("No tags found", ProcessingContext.MessageType.RESULT);
             } else {
                 StringBuilder stringBuilder = new StringBuilder();
                 tags.forEach(tag -> stringBuilder.append(tag.getTag()).append(' '));

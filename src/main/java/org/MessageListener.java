@@ -21,15 +21,15 @@ import java.text.MessageFormat;
 import java.util.*;
 import java.util.List;
 
-public class MessagesListener extends ListenerAdapter {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MessagesListener.class);
+public class MessageListener extends ListenerAdapter {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MessageListener.class);
 
     private static final Map<String, ActionHandler> REGISTERED_ACTION_HANDLERS = new HashMap<>();
     private static final UserManager USER_MANAGER = new UserManager();
     private static final GuildManager GUILD_MANAGER = new GuildManager();
 
     static {
-        MessagesListener.REGISTERED_ACTION_HANDLERS.put(Action.QUOTE.toString().toUpperCase(), new Quote());
+        MessageListener.REGISTERED_ACTION_HANDLERS.put(Action.QUOTE.toString().toUpperCase(), new Quote());
     }
 
     private static void warnIfUnusedModifiersOrArgumentsExist(ChatCommand chatCommand, ProcessingContext processingContext) {
@@ -45,7 +45,8 @@ public class MessagesListener extends ListenerAdapter {
                             && element.getResolution() != TypedValue.Resolution.ARGUMENT_MISSING)
                     .toList();
 
-            boolean modifierAccessed = accessedModifiers.contains(key);
+            boolean modifierAccessed = accessedModifiers.contains(key)
+                    || key.toString().equalsIgnoreCase(ActionHandler.GlobalActionModifier.VERBOSE.toString());
             boolean modifierAddedAfterParsing = addedAfterParsingModifiers.contains(key);
             boolean modifierIsSwitch = arguments.isEmpty() || arguments.getFirst().getType() == TypedValue.Type.SWITCH;
 
@@ -107,7 +108,7 @@ public class MessagesListener extends ListenerAdapter {
 
 
         ProcessingContext processingContext = new ProcessingContext();
-        ChatCommand chatCommand = new ChatCommand(event.getMessage(), MessagesListener.REGISTERED_ACTION_HANDLERS, processingContext);
+        ChatCommand chatCommand = new ChatCommand(event.getMessage(), MessageListener.REGISTERED_ACTION_HANDLERS, processingContext);
         ActionHandler actionHandler = chatCommand.getActionHandler();
         if (actionHandler == null) {
             return;
@@ -122,20 +123,13 @@ public class MessagesListener extends ListenerAdapter {
                     embedBuilder.addField(element.messageType().toString(), element.message(), false)
             );
         } else {
-            if (chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.VERBOSE)) {
-                processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_WARNING)).forEach(element ->
-                        embedBuilder.addField(element.messageType().toString(), element.message(), false)
-                );
-            }
+            MessageListener.LOGGER.info("Received action \"{}\"", event.getMessage().getContentRaw());
 
-
-            MessagesListener.LOGGER.info("Received action \"{}\"", event.getMessage().getContentRaw());
-
-            MessagesListener.USER_MANAGER.refreshUser(event);
-            MessagesListener.GUILD_MANAGER.refreshGuild(event);
+            MessageListener.USER_MANAGER.refreshUser(event);
+            MessageListener.GUILD_MANAGER.refreshGuild(event);
 
             actionHandler.executeAction(event, chatCommand, processingContext);
-            MessagesListener.warnIfUnusedModifiersOrArgumentsExist(chatCommand, processingContext);
+            MessageListener.warnIfUnusedModifiersOrArgumentsExist(chatCommand, processingContext);
 
             if (processingContext.hasErrorMessage()) {
                 processingContext.getMessages(List.of(ProcessingContext.MessageType.ERROR)).forEach(element ->
@@ -145,13 +139,13 @@ public class MessagesListener extends ListenerAdapter {
                 processingContext.getMessages(List.of(ProcessingContext.MessageType.RESULT)).forEach(element ->
                         embedBuilder.addField(element.messageType().toString(), element.message(), false)
                 );
-
-                if (chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.VERBOSE)) {
-                    processingContext.getMessages(List.of(ProcessingContext.MessageType.WARNING)).forEach(element ->
-                            embedBuilder.addField(element.messageType().toString(), element.message(), false)
-                    );
-                }
             }
+        }
+
+        if (!processingContext.hasParsingErrorMessage() && chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.VERBOSE)) {
+            processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_WARNING, ProcessingContext.MessageType.WARNING)).forEach(element ->
+                    embedBuilder.addField(element.messageType().toString(), element.message(), false)
+            );
         }
 
 

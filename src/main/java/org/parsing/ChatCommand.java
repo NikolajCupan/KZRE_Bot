@@ -200,8 +200,12 @@ public class ChatCommand {
         if (secondSpaceIndex <= content.length() - 3) {
             char followingCharacter = content.charAt(secondSpaceIndex + 2);
             if (followingCharacter != ' ') {
+                int nextSpaceIndex = content.indexOf(' ', secondSpaceIndex + 1);
+                String invalidEscapeCharacter = nextSpaceIndex != -1
+                        ? content.substring(secondSpaceIndex + 1, nextSpaceIndex)
+                        : content.substring(secondSpaceIndex + 1);
                 processingContext.addMessages(
-                        "The defined escape character is not valid - it must be a single character",
+                        MessageFormat.format("The defined escape character \"{0}\" is not valid - it must be a single character", invalidEscapeCharacter),
                         ProcessingContext.MessageType.PARSING_ERROR
                 );
                 return -1;
@@ -210,11 +214,11 @@ public class ChatCommand {
 
         if (!ChatCommand.VALID_ESCAPE_CHARACTERS.contains(potentialEscapeCharacter)) {
             StringBuilder stringBuilder = new StringBuilder();
-            ChatCommand.VALID_ESCAPE_CHARACTERS.forEach(element -> stringBuilder.append(element).append(' '));
-            stringBuilder.setLength(stringBuilder.length() - 1);
+            ChatCommand.VALID_ESCAPE_CHARACTERS.forEach(element -> stringBuilder.append('\"').append(element).append("\", "));
+            stringBuilder.setLength(stringBuilder.length() - 2);
 
             processingContext.addMessages(
-                    MessageFormat.format("The defined escape character is not valid \"{0}\", valid characters are \"{1}\"", potentialEscapeCharacter, stringBuilder.toString()),
+                    MessageFormat.format("The defined escape character \"{0}\" is not valid, valid characters are: [{1}]", potentialEscapeCharacter, stringBuilder.toString()),
                     ProcessingContext.MessageType.PARSING_ERROR
             );
             return -1;
@@ -440,13 +444,13 @@ public class ChatCommand {
         List<TypedValue> arguments = this.modifierMap.get(modifier);
         TypedValue firstArgument = arguments.getFirst();
 
-        ChatCommand.warnIfResolutionIsNotValidArgument(modifier, firstArgument, processingContext);
-
         if (!allowNullArgument) {
             if (firstArgument.getType() == TypedValue.Type.NULL) {
                 throw new MissingArgumentException(firstArgument.getStateMessage(modifier.toString(), false));
             }
         }
+
+        ChatCommand.warnIfResolutionIsNotValidArgument(modifier, firstArgument, processingContext);
 
         if (setUsed) {
             firstArgument.setUsed();
@@ -458,8 +462,6 @@ public class ChatCommand {
     public<T extends Enum<T>, U extends Enum<U>> U getFirstArgumentAsEnum(T modifier, Class<U> requiredEnumClass, boolean setUsed, ProcessingContext processingContext) {
         List<TypedValue> arguments = this.modifierMap.get(modifier);
         TypedValue firstArgument = arguments.getFirst();
-
-        ChatCommand.warnIfResolutionIsNotValidArgument(modifier, firstArgument, processingContext);
 
         if (firstArgument.getType() == TypedValue.Type.NULL) {
             throw new MissingArgumentException(firstArgument.getStateMessage(modifier.toString(), false));
@@ -473,6 +475,8 @@ public class ChatCommand {
                     MessageFormat.format("Actual enum type \"{0}\" and required enum type \"{1}\" are different", actualType, requiredEnumClass)
             );
         }
+
+        ChatCommand.warnIfResolutionIsNotValidArgument(modifier, firstArgument, processingContext);
 
         if (setUsed) {
             firstArgument.setUsed();

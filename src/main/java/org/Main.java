@@ -44,7 +44,7 @@ public class Main {
                 .enableIntents(GatewayIntent.MESSAGE_CONTENT)
                 .build();
 
-        api.addEventListener(new MessagesListener());
+        api.addEventListener(new MessageListener());
     }
 
     public static void parseCommandLineArguments(String[] arguments) {
