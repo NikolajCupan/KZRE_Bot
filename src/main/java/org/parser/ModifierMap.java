@@ -1,11 +1,11 @@
 package org.parser;
 
-import org.Helper;
+import org.TypedValue;
 
 import java.util.*;
 
 public class ModifierMap {
-    private final Map<Enum<?>, List<Helper.TypedValue>> modifiers;
+    private final Map<Enum<?>, List<TypedValue>> modifiers;
     private final Set<Enum<?>> accessedModifiers;
     private final Set<Enum<?>> addedAfterParsingModifiers;
 
@@ -19,7 +19,7 @@ public class ModifierMap {
         return this.modifiers.containsKey(key);
     }
 
-    public void putIfAbsent(Enum<?> key, List<Helper.TypedValue> value, boolean addedAfterParsing) {
+    public void putIfAbsent(Enum<?> key, List<TypedValue> value, boolean addedAfterParsing) {
         if (addedAfterParsing) {
             this.addedAfterParsingModifiers.add(key);
         }
@@ -27,7 +27,7 @@ public class ModifierMap {
         this.modifiers.putIfAbsent(key, value);
     }
 
-    public List<Helper.TypedValue> get(Enum<?> key) {
+    public List<TypedValue> get(Enum<?> key) {
         if (this.modifiers.containsKey(key)) {
             this.accessedModifiers.add(key);
         }
@@ -35,7 +35,7 @@ public class ModifierMap {
         return this.modifiers.get(key);
     }
 
-    public Map<Enum<?>, List<Helper.TypedValue>> getModifiers() {
+    public Map<Enum<?>, List<TypedValue>> getModifiers() {
         return this.modifiers;
     }
 

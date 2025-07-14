@@ -17,11 +17,11 @@ import java.text.MessageFormat;
 import java.util.*;
 
 public class Main {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
-
     public static List<String> COMMAND_LINE_ARGUMENTS;
     public static Dotenv DOTENV;
     public static SessionFactory DATABASE_SESSION_FACTORY;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
 
     public static void main(String[] args) {
         Main.parseCommandLineArguments(args);

@@ -12,8 +12,6 @@ import java.util.Map;
 import java.util.Set;
 
 public abstract class ActionHandler {
-    public enum GlobalActionModifier { VERBOSE, DEBUG }
-
     protected static final Map<Enum<?>, Modifier<? extends Enum<?>, ? extends Number>> ACTION_MODIFIERS =
             new HashMap<>();
 
@@ -28,9 +26,8 @@ public abstract class ActionHandler {
         );
     }
 
-    protected abstract Class<? extends Enum<?>> getActionModifierEnumClass();
-    public abstract Action getAction();
     public abstract void executeAction(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext);
+    protected abstract Class<? extends Enum<?>> getActionModifierEnumClass();
 
     public Set<String> getActionPossibleModifiers() {
         Set<String> possibleModifiers = new HashSet<>();
@@ -58,8 +55,5 @@ public abstract class ActionHandler {
         return ActionHandler.ACTION_MODIFIERS.get(actionModifier);
     }
 
-    @Override
-    public String toString() {
-        return this.getAction().toString();
-    }
+    public enum GlobalActionModifier { VERBOSE, DEBUG }
 }

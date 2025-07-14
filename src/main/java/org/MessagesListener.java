@@ -27,94 +27,22 @@ public class MessagesListener extends ListenerAdapter {
         MessagesListener.REGISTERED_ACTION_HANDLERS.put(Action.QUOTE.toString().toUpperCase(), new Quote());
     }
 
-    @Override
-    public void onMessageReceived(@NotNull MessageReceivedEvent event) {
-        if (Main.COMMAND_LINE_ARGUMENTS.contains(Constants.DEVELOPMENT_ARGUMENT)
-                && !event.getGuild().getId().equals("949756585616474152")) {
-            return;
-        }
-
-        if (event.getAuthor().isBot()) {
-            return;
-        }
-
-
-        ProcessingContext processingContext = new ProcessingContext();
-        ChatCommand chatCommand = new ChatCommand(event.getMessage(), MessagesListener.REGISTERED_ACTION_HANDLERS, processingContext);
-        ActionHandler actionHandler = chatCommand.getAction();
-        if (actionHandler == null) {
-            return;
-        }
-
-
-        EmbedBuilder embedBuilder = new EmbedBuilder();
-        embedBuilder.setColor(Color.BLACK);
-
-        if (processingContext.hasParsingErrorMessage()) {
-            processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_ERROR)).forEach(element ->
-                    embedBuilder.addField(element.messageType().toString(), element.message(), false)
-            );
-        } else {
-            if (chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.VERBOSE)) {
-                processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_WARNING)).forEach(element ->
-                        embedBuilder.addField(element.messageType().toString(), element.message(), false)
-                );
-            }
-
-
-            MessagesListener.LOGGER.info("Received action \"{}\"", event.getMessage().getContentRaw());
-
-            MessagesListener.USER_MANAGER.refreshUser(event);
-            MessagesListener.GUILD_MANAGER.refreshGuild(event);
-
-            actionHandler.executeAction(event, chatCommand, processingContext);
-            MessagesListener.addWarningsAboutUnusedModifiersAndArguments(chatCommand, processingContext);
-
-            if (processingContext.hasErrorMessage()) {
-                processingContext.getMessages(List.of(ProcessingContext.MessageType.ERROR)).forEach(element ->
-                        embedBuilder.addField(element.messageType().toString(), element.message(), false)
-                );
-            } else {
-                processingContext.getMessages(List.of(ProcessingContext.MessageType.RESULT)).forEach(element ->
-                        embedBuilder.addField(element.messageType().toString(), element.message(), false)
-                );
-
-                if (chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.VERBOSE)) {
-                    processingContext.getMessages(List.of(ProcessingContext.MessageType.WARNING)).forEach(element ->
-                            embedBuilder.addField(element.messageType().toString(), element.message(), false)
-                    );
-                }
-
-                if (chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.DEBUG)) {
-                    processingContext.getMessages(List.of(ProcessingContext.MessageType.DEBUG)).forEach(element ->
-                            embedBuilder.addField(element.messageType().toString(), element.message(), false)
-                    );
-                }
-            }
-        }
-
-
-        if (!embedBuilder.isEmpty()) {
-            event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
-        }
-    }
-
-    private static void addWarningsAboutUnusedModifiersAndArguments(ChatCommand chatCommand, ProcessingContext processingContext) {
-        Map<Enum<?>, List<Helper.TypedValue>> modifiers = chatCommand.getModifierMap().getModifiers();
+    private static void warnIfUnusedModifiersOrArgumentsExist(ChatCommand chatCommand, ProcessingContext processingContext) {
+        Map<Enum<?>, List<TypedValue>> modifiers = chatCommand.getModifierMap().getModifiers();
         Set<Enum<?>> accessedModifiers = chatCommand.getModifierMap().getAccessedModifiers();
         Set<Enum<?>> addedAfterParsingModifiers = chatCommand.getModifierMap().getAddedAfterParsingModifiers();
 
         for (Enum<?> key : modifiers.keySet()) {
-            List<Helper.TypedValue> arguments = modifiers.get(key);
-            List<Helper.TypedValue> unusedArguments = arguments.stream()
-                    .filter(element -> !element.isUsed()
-                            && element.getResolution() != Helper.TypedValue.Resolution.MODIFIER_MISSING
-                            && element.getResolution() != Helper.TypedValue.Resolution.ARGUMENT_MISSING)
+            List<TypedValue> arguments = modifiers.get(key);
+            List<TypedValue> unusedArguments = arguments.stream()
+                    .filter(element -> !element.getUsed()
+                            && element.getResolution() != TypedValue.Resolution.MODIFIER_MISSING
+                            && element.getResolution() != TypedValue.Resolution.ARGUMENT_MISSING)
                     .toList();
 
             boolean modifierAccessed = accessedModifiers.contains(key);
             boolean modifierAddedAfterParsing = addedAfterParsingModifiers.contains(key);
-            boolean modifierIsSwitch = arguments.isEmpty() || arguments.getFirst().getType() == Helper.TypedValue.Type.SWITCH;
+            boolean modifierIsSwitch = arguments.isEmpty() || arguments.getFirst().getType() == TypedValue.Type.SWITCH;
 
             StringBuilder stringBuilder = new StringBuilder();
             if (!unusedArguments.isEmpty()) {
@@ -158,6 +86,78 @@ public class MessagesListener extends ListenerAdapter {
                     );
                 }
             }
+        }
+    }
+
+    @Override
+    public void onMessageReceived(@NotNull MessageReceivedEvent event) {
+        if (Main.COMMAND_LINE_ARGUMENTS.contains(Constants.DEVELOPMENT_ARGUMENT)
+                && !event.getGuild().getId().equals("949756585616474152")) {
+            return;
+        }
+
+        if (event.getAuthor().isBot()) {
+            return;
+        }
+
+
+        ProcessingContext processingContext = new ProcessingContext();
+        ChatCommand chatCommand = new ChatCommand(event.getMessage(), MessagesListener.REGISTERED_ACTION_HANDLERS, processingContext);
+        ActionHandler actionHandler = chatCommand.getAction();
+        if (actionHandler == null) {
+            return;
+        }
+
+
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+        embedBuilder.setColor(Color.BLACK);
+
+        if (processingContext.hasParsingErrorMessage()) {
+            processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_ERROR)).forEach(element ->
+                    embedBuilder.addField(element.messageType().toString(), element.message(), false)
+            );
+        } else {
+            if (chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.VERBOSE)) {
+                processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_WARNING)).forEach(element ->
+                        embedBuilder.addField(element.messageType().toString(), element.message(), false)
+                );
+            }
+
+
+            MessagesListener.LOGGER.info("Received action \"{}\"", event.getMessage().getContentRaw());
+
+            MessagesListener.USER_MANAGER.refreshUser(event);
+            MessagesListener.GUILD_MANAGER.refreshGuild(event);
+
+            actionHandler.executeAction(event, chatCommand, processingContext);
+            MessagesListener.warnIfUnusedModifiersOrArgumentsExist(chatCommand, processingContext);
+
+            if (processingContext.hasErrorMessage()) {
+                processingContext.getMessages(List.of(ProcessingContext.MessageType.ERROR)).forEach(element ->
+                        embedBuilder.addField(element.messageType().toString(), element.message(), false)
+                );
+            } else {
+                processingContext.getMessages(List.of(ProcessingContext.MessageType.RESULT)).forEach(element ->
+                        embedBuilder.addField(element.messageType().toString(), element.message(), false)
+                );
+
+                if (chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.VERBOSE)) {
+                    processingContext.getMessages(List.of(ProcessingContext.MessageType.WARNING)).forEach(element ->
+                            embedBuilder.addField(element.messageType().toString(), element.message(), false)
+                    );
+                }
+
+                if (chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.DEBUG)) {
+                    processingContext.getMessages(List.of(ProcessingContext.MessageType.DEBUG)).forEach(element ->
+                            embedBuilder.addField(element.messageType().toString(), element.message(), false)
+                    );
+                }
+            }
+        }
+
+
+        if (!embedBuilder.isEmpty()) {
+            event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
         }
     }
 }

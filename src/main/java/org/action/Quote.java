@@ -8,23 +8,11 @@ import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.exception.ConstraintViolationException;
 import org.parser.ChatCommand;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.text.MessageFormat;
 import java.util.*;
 
 public class Quote extends ActionHandler {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Quote.class);
-
-    public enum ActionModifier { TYPE, TAG, ORDER, COUNT, VALUE }
-
-    private enum TypeArgument { GET_QUOTE, GET_TAG, NEW_QUOTE, NEW_TAG }
-    private enum OrderArgument { RANDOM, NEWEST, OLDEST }
-    private enum CountArgument { ALL }
-
-    private static final Action ACTION = Action.QUOTE;
-
     static {
         ActionHandler.ACTION_MODIFIERS.put(
                 ActionModifier.TYPE,
@@ -49,16 +37,6 @@ public class Quote extends ActionHandler {
     }
 
     @Override
-    public Action getAction() {
-        return Quote.ACTION;
-    }
-
-    @Override
-    protected Class<? extends Enum<?>> getActionModifierEnumClass() {
-        return ActionModifier.class;
-    }
-
-    @Override
     public void executeAction(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         try {
             TypeArgument typeArgument = chatCommand.getFirstArgumentAsEnum(ActionModifier.TYPE, TypeArgument.class, true, processingContext);
@@ -74,15 +52,19 @@ public class Quote extends ActionHandler {
         }
     }
 
-    private void handleGetQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
+    @Override
+    protected Class<? extends Enum<?>> getActionModifierEnumClass() {
+        return ActionModifier.class;
     }
+
+    private void handleGetQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {}
 
     private void handleGetTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         OrderArgument chatOrder = chatCommand.getFirstArgumentAsEnum(ActionModifier.ORDER, OrderArgument.class, true, processingContext);
-        Helper.TypedValue chatCount = chatCommand.getFirstArgument(ActionModifier.COUNT, false, true, processingContext);
+        TypedValue chatCount = chatCommand.getFirstArgument(ActionModifier.COUNT, false, true, processingContext);
 
         long resultsCount = Long.MAX_VALUE;
-        if (chatCount.getType() == Helper.TypedValue.Type.WHOLE_NUMBER) {
+        if (chatCount.getType() == TypedValue.Type.WHOLE_NUMBER) {
             resultsCount = Long.parseLong(chatCount.getUsedValue());
         }
 
@@ -120,11 +102,10 @@ public class Quote extends ActionHandler {
         }
     }
 
-    private void handleNewQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
-    }
+    private void handleNewQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {}
 
     private void handleNewTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
-        Helper.TypedValue chatNewTag = chatCommand.getFirstArgument(ActionModifier.VALUE, false, true, processingContext);
+        TypedValue chatNewTag = chatCommand.getFirstArgument(ActionModifier.VALUE, false, true, processingContext);
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
@@ -147,4 +128,10 @@ public class Quote extends ActionHandler {
             session.close();
         }
     }
+
+    public enum ActionModifier { TYPE, TAG, ORDER, COUNT, VALUE }
+
+    private enum TypeArgument { GET_QUOTE, GET_TAG, NEW_QUOTE, NEW_TAG }
+    private enum OrderArgument { RANDOM, NEWEST, OLDEST }
+    private enum CountArgument { ALL }
 }

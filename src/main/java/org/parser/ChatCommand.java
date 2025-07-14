@@ -4,9 +4,9 @@ import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.entities.emoji.CustomEmoji;
 import net.dv8tion.jda.api.interactions.commands.SlashCommandReference;
-import org.Helper;
 import org.Modifier;
 import org.ProcessingContext;
+import org.TypedValue;
 import org.action.ActionHandler;
 import org.exception.MissingArgumentException;
 import org.javatuples.Quartet;
@@ -125,11 +125,11 @@ public class ChatCommand {
                 }
             }
 
-            if (!modifier.isSwitchModifier() && arguments.isEmpty()) {
+            if (!modifier.getIsSwitchModifier() && arguments.isEmpty()) {
                 arguments.add("");
             }
 
-            List<Helper.TypedValue> parsedArguments = new ArrayList<>();
+            List<TypedValue> parsedArguments = new ArrayList<>();
             for (String argument : arguments) {
                 parsedArguments.add(ChatCommand.parseArgument(argument, modifier));
             }
@@ -141,11 +141,11 @@ public class ChatCommand {
             Enum<?> actionModifierEnumerator = this.action.getActionModifierEnumerator(possibleModifier);
             Modifier<? extends Enum<?>, ? extends Number> modifier = this.action.getModifier(actionModifierEnumerator);
 
-            if (!modifier.isSwitchModifier() && !this.modifierMap.containsKey(actionModifierEnumerator)) {
+            if (!modifier.getIsSwitchModifier() && !this.modifierMap.containsKey(actionModifierEnumerator)) {
                 this.modifierMap.putIfAbsent(
                         actionModifierEnumerator,
-                        List.of(new Helper.TypedValue(
-                                modifier.getDefaultArgumentType(), Helper.TypedValue.Resolution.MODIFIER_MISSING, modifier.getDefaultArgument(), "", modifier.getPossibleArgumentsEnumClass()
+                        List.of(new TypedValue(
+                                modifier.getDefaultArgumentType(), TypedValue.Resolution.MODIFIER_MISSING, modifier.getDefaultArgument(), "", modifier.getPossibleArgumentsEnumClass()
                         )), true
                 );
             }
@@ -414,6 +414,24 @@ public class ChatCommand {
         return indexedMessage;
     }
 
+    private static TypedValue parseArgument(String argument, Modifier<? extends Enum<?>, ? extends Number> modifier) {
+        if (argument.isBlank()) {
+            return new TypedValue(
+                    modifier.getDefaultArgumentType(), TypedValue.Resolution.ARGUMENT_MISSING, modifier.getDefaultArgument(), argument, modifier.getPossibleArgumentsEnumClass()
+            );
+        }
+
+        if (!modifier.isPossibleArgument(argument)) {
+            return new TypedValue(
+                    modifier.getDefaultArgumentType(), TypedValue.Resolution.ARGUMENT_INVALID, modifier.getDefaultArgument(), argument, modifier.getPossibleArgumentsEnumClass()
+            );
+        }
+
+        return new TypedValue(
+                modifier.getChatArgumentType(argument), TypedValue.Resolution.ARGUMENT_VALID, argument, argument, modifier.getPossibleArgumentsEnumClass()
+        );
+    }
+
     private static void warnIfEscapeWasUseless(char escapedCharacter, char escapeCharacter, ProcessingContext processingContext) {
         String strEscapedCharacter = String.valueOf(escapedCharacter);
         if (!strEscapedCharacter.equals(ChatCommand.MODIFIER_PREFIX) && !strEscapedCharacter.equals(ChatCommand.QUOTE_DELIMIER)
@@ -425,38 +443,43 @@ public class ChatCommand {
         }
     }
 
-    public ActionHandler getAction() {
-        return this.action;
-    }
-
-    public ModifierMap getModifierMap() {
-        return this.modifierMap;
-    }
-
-    public<T extends Enum<T>> boolean isSwitchModifierPresent(T modifier) {
-        if (!this.modifierMap.containsKey(modifier)) {
-            return false;
+    private static<T extends Enum<T>> void warnIfResolutionIsNotValidArgument(T modifier, TypedValue argument, ProcessingContext processingContext) {
+        if (argument.getResolution() != TypedValue.Resolution.ARGUMENT_VALID) {
+            processingContext.addMessages(
+                    argument.getStateMessage(modifier.toString(), true),
+                    ProcessingContext.MessageType.WARNING
+            );
         }
+    }
 
-        List<Helper.TypedValue> arguments = this.modifierMap.get(modifier);
-        if (arguments != null && !arguments.isEmpty()) {
-            if (arguments.stream().anyMatch(element -> element.getType() != Helper.TypedValue.Type.SWITCH)) {
-                throw new IllegalStateException("Modifier is not a switch modifier");
+    public<T extends Enum<T>> TypedValue getFirstArgument(T modifier, boolean allowNullArgument, boolean setUsed, ProcessingContext processingContext) {
+        List<TypedValue> arguments = this.modifierMap.get(modifier);
+        TypedValue firstArgument = arguments.getFirst();
+
+        ChatCommand.warnIfResolutionIsNotValidArgument(modifier, firstArgument, processingContext);
+
+        if (!allowNullArgument) {
+            if (firstArgument.getType() == TypedValue.Type.NULL) {
+                throw new MissingArgumentException(firstArgument.getStateMessage(modifier.toString(), false));
             }
         }
 
-        return true;
+        if (setUsed) {
+            firstArgument.setUsed();
+        }
+
+        return firstArgument;
     }
 
     public<T extends Enum<T>, U extends Enum<U>> U getFirstArgumentAsEnum(T modifier, Class<U> requiredEnumClass, boolean setUsed, ProcessingContext processingContext) {
-        List<Helper.TypedValue> arguments = this.modifierMap.get(modifier);
-        Helper.TypedValue firstArgument = arguments.getFirst();
+        List<TypedValue> arguments = this.modifierMap.get(modifier);
+        TypedValue firstArgument = arguments.getFirst();
 
-        ChatCommand.addWarningIfResolutionIsNotValidArgument(modifier, firstArgument, processingContext);
+        ChatCommand.warnIfResolutionIsNotValidArgument(modifier, firstArgument, processingContext);
 
-        if (firstArgument.getType() == Helper.TypedValue.Type.NULL) {
+        if (firstArgument.getType() == TypedValue.Type.NULL) {
             throw new MissingArgumentException(firstArgument.getStateMessage(modifier.toString(), false));
-        } else if (firstArgument.getType() != Helper.TypedValue.Type.ENUMERATOR) {
+        } else if (firstArgument.getType() != TypedValue.Type.ENUMERATOR) {
             throw new IllegalStateException("Argument is not enumerator");
         }
 
@@ -474,49 +497,26 @@ public class ChatCommand {
         return requiredEnumClass.cast(Enum.valueOf(requiredEnumClass, firstArgument.getUsedValue().toUpperCase()));
     }
 
-    public<T extends Enum<T>> Helper.TypedValue getFirstArgument(T modifier, boolean allowNullArgument, boolean setUsed, ProcessingContext processingContext) {
-        List<Helper.TypedValue> arguments = this.modifierMap.get(modifier);
-        Helper.TypedValue firstArgument = arguments.getFirst();
+    public<T extends Enum<T>> boolean isSwitchModifierPresent(T modifier) {
+        if (!this.modifierMap.containsKey(modifier)) {
+            return false;
+        }
 
-        ChatCommand.addWarningIfResolutionIsNotValidArgument(modifier, firstArgument, processingContext);
-
-        if (!allowNullArgument) {
-            if (firstArgument.getType() == Helper.TypedValue.Type.NULL) {
-                throw new MissingArgumentException(firstArgument.getStateMessage(modifier.toString(), false));
+        List<TypedValue> arguments = this.modifierMap.get(modifier);
+        if (arguments != null && !arguments.isEmpty()) {
+            if (arguments.stream().anyMatch(element -> element.getType() != TypedValue.Type.SWITCH)) {
+                throw new IllegalStateException("Modifier is not a switch modifier");
             }
         }
 
-        if (setUsed) {
-            firstArgument.setUsed();
-        }
-
-        return firstArgument;
+        return true;
     }
 
-    private static<T extends Enum<T>> void addWarningIfResolutionIsNotValidArgument(T modifier, Helper.TypedValue argument, ProcessingContext processingContext) {
-        if (argument.getResolution() != Helper.TypedValue.Resolution.ARGUMENT_VALID) {
-            processingContext.addMessages(
-                    argument.getStateMessage(modifier.toString(), true),
-                    ProcessingContext.MessageType.WARNING
-            );
-        }
+    public ActionHandler getAction() {
+        return this.action;
     }
 
-    private static Helper.TypedValue parseArgument(String argument, Modifier<? extends Enum<?>, ? extends Number> modifier) {
-        if (argument.isBlank()) {
-            return new Helper.TypedValue(
-                    modifier.getDefaultArgumentType(), Helper.TypedValue.Resolution.ARGUMENT_MISSING, modifier.getDefaultArgument(), argument, modifier.getPossibleArgumentsEnumClass()
-            );
-        }
-
-        if (!modifier.isPossibleArgument(argument)) {
-            return new Helper.TypedValue(
-                    modifier.getDefaultArgumentType(), Helper.TypedValue.Resolution.ARGUMENT_INVALID, modifier.getDefaultArgument(), argument, modifier.getPossibleArgumentsEnumClass()
-            );
-        }
-
-        return new Helper.TypedValue(
-                modifier.getChatArgumentType(argument), Helper.TypedValue.Resolution.ARGUMENT_VALID, argument, argument, modifier.getPossibleArgumentsEnumClass()
-        );
+    public ModifierMap getModifierMap() {
+        return this.modifierMap;
     }
 }

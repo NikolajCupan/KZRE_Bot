@@ -8,18 +8,10 @@ import java.util.OptionalInt;
 import java.util.stream.IntStream;
 
 public class IndexedMessage {
-    public record TypedCharacter(Character character, CharacterType characterType) {
-        public enum CharacterType{ NULL, LITERAL, MODIFIER, SENTENCE_START, SENTENCE_END }
-    }
-
     private final List<TypedCharacter> typedCharacters;
 
     public IndexedMessage() {
         this.typedCharacters = new ArrayList<>();
-    }
-
-    public List<TypedCharacter> getTypedCharacters() {
-        return this.typedCharacters;
     }
 
     public void addCharacter(char c, TypedCharacter.CharacterType characterType) {
@@ -66,5 +58,13 @@ public class IndexedMessage {
         }
 
         return new Quartet<>(startIndex, endIndex, stringBuilder.toString(), indexedString);
+    }
+
+    public List<TypedCharacter> getTypedCharacters() {
+        return this.typedCharacters;
+    }
+
+    public record TypedCharacter(Character character, CharacterType characterType) {
+        public enum CharacterType{ NULL, LITERAL, MODIFIER, SENTENCE_START, SENTENCE_END }
     }
 }

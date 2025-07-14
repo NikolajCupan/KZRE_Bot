@@ -8,7 +8,7 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
     private final Class<T> possibleArgumentsEnumClass;
 
     private final String defaultArgument;
-    private final Helper.TypedValue.Type defaultArgumentType;
+    private final TypedValue.Type defaultArgumentType;
 
     private final boolean argumentCanBeAnyString;
     private final boolean argumentCanBeDecimalNumber;
@@ -38,16 +38,16 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
         this.defaultArgument = defaultArgument == null ? "" : String.valueOf(defaultArgument);
         if (defaultArgument == null) {
             if (isSwitchModifier) {
-                this.defaultArgumentType = Helper.TypedValue.Type.SWITCH;
+                this.defaultArgumentType = TypedValue.Type.SWITCH;
             } else {
-                this.defaultArgumentType = Helper.TypedValue.Type.NULL;
+                this.defaultArgumentType = TypedValue.Type.NULL;
             }
         } else if (defaultArgument instanceof Enum<?>) {
             if (!Helper.enumeratorIsFromEnum(possibleArgumentsEnumClass, (Enum<?>)defaultArgument)) {
                 throw new IllegalArgumentException("If default argument is an enumerator, it must be from the possible arguments enum");
             }
 
-            this.defaultArgumentType = Helper.TypedValue.Type.ENUMERATOR;
+            this.defaultArgumentType = TypedValue.Type.ENUMERATOR;
         } else if (Helper.isWholeNumber(defaultArgument)) {
             if (!(minInclusive instanceof Long) || !(defaultArgument instanceof Long)) {
                 throw new IllegalArgumentException("If default argument is a whole number, both it and the range values must be of type Long");
@@ -55,17 +55,17 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
                 throw new IllegalArgumentException("Default argument is out of specified range");
             }
 
-            this.defaultArgumentType = Helper.TypedValue.Type.WHOLE_NUMBER;
-        } else if (Helper.isDecimal(defaultArgument)) {
+            this.defaultArgumentType = TypedValue.Type.WHOLE_NUMBER;
+        } else if (Helper.isDecimalNumber(defaultArgument)) {
             if (!(minInclusive instanceof Double) || !(defaultArgument instanceof Double)) {
                 throw new IllegalArgumentException("If default argument is a decimal number, both it and the range values must be of type Double");
             } else if (!Helper.isDoubleInRange(defaultArgument, minInclusive, maxInclusive)) {
                 throw new IllegalArgumentException("Default argument is out of specified range");
             }
 
-            this.defaultArgumentType = Helper.TypedValue.Type.DECIMAL_NUMBER;
+            this.defaultArgumentType = TypedValue.Type.DECIMAL_NUMBER;
         } else {
-            this.defaultArgumentType = Helper.TypedValue.Type.STRING;
+            this.defaultArgumentType = TypedValue.Type.STRING;
         }
 
 
@@ -92,28 +92,12 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
         }
     }
 
-    public Class<T> getPossibleArgumentsEnumClass() {
-        return this.possibleArgumentsEnumClass;
-    }
-
-    public String getDefaultArgument() {
-        return this.defaultArgument;
-    }
-
-    public Helper.TypedValue.Type getDefaultArgumentType() {
-        return this.defaultArgumentType;
-    }
-
-    public boolean isSwitchModifier() {
-        return this.isSwitchModifier;
-    }
-
     public boolean isPossibleArgument(String chatArgument) {
         chatArgument = chatArgument.toUpperCase();
 
         if (this.argumentCanBeAnyString) {
             return true;
-        } else if (this.argumentCanBeDecimalNumber && Helper.isDecimal(chatArgument)
+        } else if (this.argumentCanBeDecimalNumber && Helper.isDecimalNumber(chatArgument)
                 && Helper.isDoubleInRange(chatArgument, this.minInclusive, this.maxInclusive)) {
             return true;
         } else if (this.argumentCanBeWholeNumber && Helper.isWholeNumber(chatArgument)
@@ -124,19 +108,35 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
         return this.possibleArguments.contains(chatArgument);
     }
 
-    public Helper.TypedValue.Type getChatArgumentType(String chatArgument) {
+    public TypedValue.Type getChatArgumentType(String chatArgument) {
         chatArgument = chatArgument.toUpperCase();
 
         if (this.possibleArguments.contains(chatArgument)) {
-            return Helper.TypedValue.Type.ENUMERATOR;
+            return TypedValue.Type.ENUMERATOR;
         } else if (this.argumentCanBeWholeNumber && Helper.isWholeNumber(chatArgument)
                 && Helper.isLongInRange(chatArgument, this.minInclusive, this.maxInclusive)) {
-            return Helper.TypedValue.Type.WHOLE_NUMBER;
-        } else if (this.argumentCanBeDecimalNumber && Helper.isDecimal(chatArgument)
+            return TypedValue.Type.WHOLE_NUMBER;
+        } else if (this.argumentCanBeDecimalNumber && Helper.isDecimalNumber(chatArgument)
                 && Helper.isDoubleInRange(chatArgument, this.minInclusive, this.maxInclusive)) {
-            return Helper.TypedValue.Type.DECIMAL_NUMBER;
+            return TypedValue.Type.DECIMAL_NUMBER;
         } else {
-            return Helper.TypedValue.Type.STRING;
+            return TypedValue.Type.STRING;
         }
+    }
+
+    public Class<T> getPossibleArgumentsEnumClass() {
+        return this.possibleArgumentsEnumClass;
+    }
+
+    public String getDefaultArgument() {
+        return this.defaultArgument;
+    }
+
+    public TypedValue.Type getDefaultArgumentType() {
+        return this.defaultArgumentType;
+    }
+
+    public boolean getIsSwitchModifier() {
+        return this.isSwitchModifier;
     }
 }
