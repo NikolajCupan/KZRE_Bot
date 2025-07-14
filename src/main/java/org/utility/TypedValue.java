@@ -51,6 +51,17 @@ public class TypedValue {
         return this.usedValue.trim();
     }
 
+    public String getTrimmedNormalizedUsedValue(ProcessingContext processingContext) {
+        String trimmedUsedValue = this.getTrimmedUsedValue(processingContext);
+        String normalizedUsedValue = trimmedUsedValue.replaceAll(" +", " ");
+
+        if (!trimmedUsedValue.equals(normalizedUsedValue)) {
+            processingContext.addMessages("Multiple consecutive spaces were replaced with a single space", ProcessingContext.MessageType.WARNING);
+        }
+
+        return normalizedUsedValue;
+    }
+
     public TypedValue.Type getType() {
         return this.type;
     }

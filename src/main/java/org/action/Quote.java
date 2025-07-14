@@ -95,11 +95,12 @@ public class Quote extends ActionHandler {
                     .getResultList();
 
             if (tags.isEmpty()) {
-                processingContext.addMessages("No tags found", ProcessingContext.MessageType.RESULT);
+                processingContext.addMessages("No tags found", ProcessingContext.MessageType.INFO_RESULT);
             } else {
                 StringBuilder stringBuilder = new StringBuilder();
-                tags.forEach(tag -> stringBuilder.append(tag.getTag()).append(' '));
-                processingContext.addMessages(stringBuilder.toString(), ProcessingContext.MessageType.RESULT);
+                tags.forEach(tag -> stringBuilder.append("\"").append(tag.getTag()).append("\", "));
+                stringBuilder.setLength(stringBuilder.length() - 2);
+                processingContext.addMessages(stringBuilder.toString(), ProcessingContext.MessageType.SUCCESS_RESULT);
             }
         } finally {
             transaction.commit();
@@ -116,22 +117,22 @@ public class Quote extends ActionHandler {
         }
 
 
-        String trimmedNewTag = chatNewTag.getTrimmedUsedValue(processingContext);
+        String trimmedNormalizedNewTag = chatNewTag.getTrimmedNormalizedUsedValue(processingContext);
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
 
         try {
-            TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), trimmedNewTag);
+            TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), trimmedNormalizedNewTag);
             session.persist(newTag);
 
             processingContext.addMessages(
-                    MessageFormat.format("New tag \"{0}\" was successfully created", trimmedNewTag),
-                    ProcessingContext.MessageType.RESULT
+                    MessageFormat.format("New tag \"{0}\" was successfully created", trimmedNormalizedNewTag),
+                    ProcessingContext.MessageType.SUCCESS_RESULT
             );
         } catch (ConstraintViolationException exception) {
             processingContext.addMessages(
-                    MessageFormat.format("Tag \"{0}\" already exists", trimmedNewTag),
+                    MessageFormat.format("Tag \"{0}\" already exists", trimmedNormalizedNewTag),
                     ProcessingContext.MessageType.ERROR
             );
         } finally {
