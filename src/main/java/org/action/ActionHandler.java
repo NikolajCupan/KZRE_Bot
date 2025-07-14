@@ -1,10 +1,10 @@
 package org.action;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import org.Helper;
-import org.Modifier;
-import org.ProcessingContext;
-import org.parser.ChatCommand;
+import org.utility.Helper;
+import org.parsing.Modifier;
+import org.utility.ProcessingContext;
+import org.parsing.ChatCommand;
 
 import java.util.HashMap;
 import java.util.HashSet;

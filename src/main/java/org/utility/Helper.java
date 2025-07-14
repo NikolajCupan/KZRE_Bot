@@ -1,4 +1,4 @@
-package org;
+package org.utility;
 
 public class Helper {
     public static<T extends Enum<?>, U extends Enum<?>> boolean enumeratorIsFromEnum(Class<T> enumClass, U testedEnumerator) {

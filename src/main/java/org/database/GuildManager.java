@@ -1,23 +1,24 @@
-package org;
+package org.database;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import org.dto.UserDto;
+import org.Main;
+import org.database.dto.GuildDto;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.jetbrains.annotations.NotNull;
 
-public class UserManager {
-    public UserManager() {}
+public class GuildManager {
+    public GuildManager() {}
 
-    public void refreshUser(@NotNull MessageReceivedEvent event) {
+    public void refreshGuild(@NotNull MessageReceivedEvent event) {
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
 
         try {
-            String snowflake = event.getMessage().getAuthor().getId();
-            if (!UserDto.userExists(session, snowflake)) {
-                UserDto newUser = new UserDto(snowflake);
-                session.persist(newUser);
+            String snowflake = event.getMessage().getGuild().getId();
+            if (!GuildDto.guildExists(session, snowflake)) {
+                GuildDto newGuild = new GuildDto(snowflake);
+                session.persist(newGuild);
             }
         } finally {
             transaction.commit();

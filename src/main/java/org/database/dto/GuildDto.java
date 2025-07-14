@@ -1,4 +1,4 @@
-package org.dto;
+package org.database.dto;
 
 import jakarta.persistence.*;
 import org.hibernate.Session;

@@ -2,12 +2,16 @@ package org.action;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.*;
-import org.dto.TagDto;
+import org.database.dto.TagDto;
 import org.exception.CustomException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.exception.ConstraintViolationException;
-import org.parser.ChatCommand;
+import org.parsing.ChatCommand;
+import org.parsing.Modifier;
+import org.utility.Helper;
+import org.utility.ProcessingContext;
+import org.utility.TypedValue;
 
 import java.text.MessageFormat;
 import java.util.*;

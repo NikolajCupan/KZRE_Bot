@@ -10,8 +10,8 @@
         <property name="hibernate.format_sql">true</property>
         <property name="hibernate.highlight_sql">true</property>
 
-        <mapping class="org.dto.GuildDto"/>
-        <mapping class="org.dto.TagDto"/>
-        <mapping class="org.dto.UserDto"/>
+        <mapping class="org.database.dto.GuildDto"/>
+        <mapping class="org.database.dto.TagDto"/>
+        <mapping class="org.database.dto.UserDto"/>
     </session-factory>
 </hibernate-configuration>

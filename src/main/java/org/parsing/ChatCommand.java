@@ -1,12 +1,11 @@
-package org.parser;
+package org.parsing;
 
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.entities.emoji.CustomEmoji;
 import net.dv8tion.jda.api.interactions.commands.SlashCommandReference;
-import org.Modifier;
-import org.ProcessingContext;
-import org.TypedValue;
+import org.utility.ProcessingContext;
+import org.utility.TypedValue;
 import org.action.ActionHandler;
 import org.exception.MissingArgumentException;
 import org.javatuples.Quartet;
