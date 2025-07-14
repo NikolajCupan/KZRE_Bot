@@ -322,6 +322,23 @@ public class ChatCommand {
 
         for (; i < content.length(); ++i) {
             char c = content.charAt(i);
+
+            if (escapeNext) {
+                escapeNext = false;
+                ChatCommand.warnIfEscapeWasUseless(c, escapeCharacter, processingContext);
+
+                if (c == ' ' && !inSentence) {
+                    IndexedMessage.TypedCharacter previousTypedCharacter = indexedMessage.getLast();
+                    if (previousTypedCharacter != null && previousTypedCharacter.character() != ' ') {
+                        indexedMessage.addCharacter(c, IndexedMessage.TypedCharacter.CharacterType.LITERAL);
+                    }
+                } else {
+                    indexedMessage.addCharacter(c, IndexedMessage.TypedCharacter.CharacterType.LITERAL);
+                }
+
+                continue;
+            }
+
             if (c == ' ') {
                 if (inSentence) {
                     indexedMessage.addCharacter(c, IndexedMessage.TypedCharacter.CharacterType.LITERAL);
@@ -332,14 +349,6 @@ public class ChatCommand {
                     }
                 }
 
-                continue;
-            }
-
-            if (escapeNext) {
-                escapeNext = false;
-
-                ChatCommand.warnIfEscapeWasUseless(c, escapeCharacter, processingContext);
-                indexedMessage.addCharacter(c, IndexedMessage.TypedCharacter.CharacterType.LITERAL);
                 continue;
             }
 
@@ -403,7 +412,7 @@ public class ChatCommand {
     }
 
     private static TypedValue parseArgument(String argument, Modifier<? extends Enum<?>, ? extends Number> modifier) {
-        if (argument.isBlank()) {
+        if (argument.isEmpty()) {
             return new TypedValue(
                     modifier.getDefaultArgumentType(), TypedValue.Resolution.ARGUMENT_MISSING, modifier.getDefaultArgument(), argument, modifier.getPossibleArgumentsEnumClass()
             );

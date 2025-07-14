@@ -18,6 +18,10 @@ public class IndexedMessage {
         this.typedCharacters.add(new TypedCharacter(c, characterType));
     }
 
+    public TypedCharacter getLast() {
+        return this.typedCharacters.isEmpty() ? null : this.typedCharacters.getLast();
+    }
+
     public Quartet<Integer, Integer, String, List<TypedCharacter>> getTokenStartingFromIndex(int index) {
         if (index >= this.typedCharacters.size()
                 || (index == this.typedCharacters.size() - 1 &&  this.typedCharacters.get(index).characterType == TypedCharacter.CharacterType.SENTENCE_END)) {
@@ -58,10 +62,6 @@ public class IndexedMessage {
         }
 
         return new Quartet<>(startIndex, endIndex, stringBuilder.toString(), indexedString);
-    }
-
-    public List<TypedCharacter> getTypedCharacters() {
-        return this.typedCharacters;
     }
 
     public record TypedCharacter(Character character, CharacterType characterType) {

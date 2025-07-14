@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.*;
 import org.database.dto.TagDto;
 import org.exception.CustomException;
+import org.exception.InvalidActionArgumentException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.exception.ConstraintViolationException;
@@ -28,7 +29,7 @@ public class Quote extends ActionHandler {
         );
         ActionHandler.ACTION_MODIFIERS.put(
                 ActionModifier.ORDER,
-                new Modifier<>(OrderArgument.class, OrderArgument.RANDOM, false, false, false, false, null, null)
+                new Modifier<>(OrderArgument.class, OrderArgument.NEWEST, false, false, false, false, null, null)
         );
         ActionHandler.ACTION_MODIFIERS.put(
                 ActionModifier.COUNT,
@@ -110,21 +111,27 @@ public class Quote extends ActionHandler {
 
     private void handleNewTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         TypedValue chatNewTag = chatCommand.getFirstArgument(ActionModifier.VALUE, false, true, processingContext);
+        if (chatNewTag.getUsedValue().isBlank()) {
+            throw new InvalidActionArgumentException("New tag cannot be an empty value");
+        }
+
+
+        String trimmedNewTag = chatNewTag.getTrimmedUsedValue(processingContext);
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
 
         try {
-            TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewTag.getUsedValue());
+            TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), trimmedNewTag);
             session.persist(newTag);
 
             processingContext.addMessages(
-                    MessageFormat.format("New tag \"{0}\" was successfully created", chatNewTag.getUsedValue()),
+                    MessageFormat.format("New tag \"{0}\" was successfully created", trimmedNewTag),
                     ProcessingContext.MessageType.RESULT
             );
         } catch (ConstraintViolationException exception) {
             processingContext.addMessages(
-                    MessageFormat.format("Tag \"{0}\" already exists", chatNewTag.getUsedValue()),
+                    MessageFormat.format("Tag \"{0}\" already exists", trimmedNewTag),
                     ProcessingContext.MessageType.ERROR
             );
         } finally {

@@ -37,6 +37,20 @@ public class TypedValue {
         return message;
     }
 
+    public String getTrimmedUsedValue(ProcessingContext processingContext) {
+        boolean hasLeadingWhitespace = this.usedValue.startsWith(" ");
+        boolean hasTrailingWhitespace = this.usedValue.endsWith(" ");
+        if (hasLeadingWhitespace && hasTrailingWhitespace) {
+            processingContext.addMessages("Trailing and leading whitespace(s) were removed from new tag", ProcessingContext.MessageType.WARNING);
+        } else if (hasLeadingWhitespace) {
+            processingContext.addMessages("Leading whitespace(s) were removed from new tag", ProcessingContext.MessageType.WARNING);
+        } else if (hasTrailingWhitespace) {
+            processingContext.addMessages("Trailing whitespace(s) were removed from new tag", ProcessingContext.MessageType.WARNING);
+        }
+
+        return this.usedValue.trim();
+    }
+
     public TypedValue.Type getType() {
         return this.type;
     }
