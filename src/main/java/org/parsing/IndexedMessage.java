@@ -38,7 +38,7 @@ public class IndexedMessage {
             endIndex = IntStream.range(startIndex, this.typedCharacters.size())
                     .filter(i -> this.typedCharacters.get(i).characterType == TypedCharacter.CharacterType.SENTENCE_END)
                     .findFirst()
-                    .getAsInt();
+                    .orElseThrow();
             ++startIndex;
         } else {
             OptionalInt potentialEndIndex = IntStream.range(startIndex, this.typedCharacters.size())
