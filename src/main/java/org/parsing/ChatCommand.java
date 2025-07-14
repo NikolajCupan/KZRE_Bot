@@ -149,21 +149,6 @@ public class ChatCommand {
                 );
             }
         }
-
-
-        StringBuilder stringBuilder = new StringBuilder();
-        indexedMessage.getTypedCharacters().forEach(element -> {
-            if (element.characterType() == IndexedMessage.TypedCharacter.CharacterType.LITERAL) {
-                stringBuilder.append(element.character());
-            } else {
-                stringBuilder.append("`").append(element.character()).append("`");
-            }
-        });
-
-        processingContext.addMessages(
-                stringBuilder.toString(),
-                ProcessingContext.MessageType.DEBUG
-        );
     }
 
     private static boolean isValidAction(String content, Map<String, ActionHandler> registeredActionHandlers) {

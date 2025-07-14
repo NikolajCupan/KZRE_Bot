@@ -151,12 +151,6 @@ public class MessagesListener extends ListenerAdapter {
                             embedBuilder.addField(element.messageType().toString(), element.message(), false)
                     );
                 }
-
-                if (chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.DEBUG)) {
-                    processingContext.getMessages(List.of(ProcessingContext.MessageType.DEBUG)).forEach(element ->
-                            embedBuilder.addField(element.messageType().toString(), element.message(), false)
-                    );
-                }
             }
         }
 

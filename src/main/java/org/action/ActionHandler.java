@@ -20,10 +20,6 @@ public abstract class ActionHandler {
                 ActionHandler.GlobalActionModifier.VERBOSE,
                 new Modifier<>(Helper.EmptyEnum.class, null, false, false, false, true, null, null)
         );
-        ActionHandler.ACTION_MODIFIERS.put(
-                ActionHandler.GlobalActionModifier.DEBUG,
-                new Modifier<>(Helper.EmptyEnum.class, null, false, false, false, true, null, null)
-        );
     }
 
     public abstract void executeAction(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext);
@@ -56,5 +52,5 @@ public abstract class ActionHandler {
         return ActionHandler.ACTION_MODIFIERS.get(actionModifier);
     }
 
-    public enum GlobalActionModifier { VERBOSE, DEBUG }
+    public enum GlobalActionModifier { VERBOSE }
 }

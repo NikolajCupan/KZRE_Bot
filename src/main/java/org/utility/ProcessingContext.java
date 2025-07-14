@@ -33,6 +33,6 @@ public class ProcessingContext {
         );
     }
 
-    public enum MessageType { DEBUG, RESULT, WARNING, PARSING_WARNING, ERROR, PARSING_ERROR }
+    public enum MessageType { RESULT, WARNING, PARSING_WARNING, ERROR, PARSING_ERROR }
     public record Message(String message, MessageType messageType) {}
 }
