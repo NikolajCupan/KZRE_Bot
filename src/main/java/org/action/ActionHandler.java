@@ -27,15 +27,15 @@ public abstract class ActionHandler {
     }
 
     public abstract void executeAction(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext);
-    protected abstract Class<? extends Enum<?>> getActionModifierEnumClass();
+    protected abstract Class<? extends Enum<?>> getModifierEnumClass();
 
-    public Set<String> getActionPossibleModifiers() {
+    public Set<String> getPossibleModifiers() {
         Set<String> possibleModifiers = new HashSet<>();
         for (GlobalActionModifier enumerator : GlobalActionModifier.class.getEnumConstants()) {
             possibleModifiers.add(enumerator.toString());
         }
 
-        Class<? extends Enum<?>> actionModifierEnumClassDerived = this.getActionModifierEnumClass();
+        Class<? extends Enum<?>> actionModifierEnumClassDerived = this.getModifierEnumClass();
         for (Enum<?> enumerator : actionModifierEnumClassDerived.getEnumConstants()) {
             possibleModifiers.add(enumerator.toString());
         }
@@ -43,12 +43,12 @@ public abstract class ActionHandler {
         return possibleModifiers;
     }
 
-    public Enum<?> getActionModifierEnumerator(String strModifier) {
+    public Enum<?> getModifierEnumerator(String strModifier) {
         try {
             return Enum.valueOf(GlobalActionModifier.class, strModifier);
         } catch (IllegalArgumentException ignored) {
             //noinspection unchecked, rawtypes
-            return Enum.valueOf((Class)this.getActionModifierEnumClass(), strModifier);
+            return Enum.valueOf((Class)this.getModifierEnumClass(), strModifier);
         }
     }
 

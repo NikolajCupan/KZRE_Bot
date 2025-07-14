@@ -57,7 +57,7 @@ public class Quote extends ActionHandler {
     }
 
     @Override
-    protected Class<? extends Enum<?>> getActionModifierEnumClass() {
+    protected Class<? extends Enum<?>> getModifierEnumClass() {
         return ActionModifier.class;
     }
 

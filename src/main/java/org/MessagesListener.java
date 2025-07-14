@@ -108,7 +108,7 @@ public class MessagesListener extends ListenerAdapter {
 
         ProcessingContext processingContext = new ProcessingContext();
         ChatCommand chatCommand = new ChatCommand(event.getMessage(), MessagesListener.REGISTERED_ACTION_HANDLERS, processingContext);
-        ActionHandler actionHandler = chatCommand.getAction();
+        ActionHandler actionHandler = chatCommand.getActionHandler();
         if (actionHandler == null) {
             return;
         }

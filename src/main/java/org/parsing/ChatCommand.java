@@ -23,7 +23,7 @@ public class ChatCommand {
             "+", "%", "=", "^", "~", "\\", "/", "|", "*"
     );
 
-    private ActionHandler action;
+    private ActionHandler actionHandler;
     private ModifierMap modifierMap;
 
     public ChatCommand(Message message, Map<String, ActionHandler> registeredActionHandlers, ProcessingContext processingContext) {
@@ -31,7 +31,7 @@ public class ChatCommand {
             return;
         }
 
-        this.action = ChatCommand.parseAction(message.getContentRaw(), registeredActionHandlers);
+        this.actionHandler = ChatCommand.parseAction(message.getContentRaw(), registeredActionHandlers);
         int escapeCharacterIndex = ChatCommand.parseEscapeCharacter(message.getContentRaw(), processingContext);
         ChatCommand.processMentions(message, processingContext);
         IndexedMessage indexedMessage = ChatCommand.parseMessage(message.getContentDisplay(), escapeCharacterIndex, processingContext);
@@ -42,7 +42,7 @@ public class ChatCommand {
 
 
         this.modifierMap = new ModifierMap();
-        Set<String> actionPossibleModifiers = this.action.getActionPossibleModifiers();
+        Set<String> actionPossibleModifiers = this.actionHandler.getPossibleModifiers();
 
         assert indexedMessage != null;
         Quartet<Integer, Integer, String, List<IndexedMessage.TypedCharacter>> indexedToken =
@@ -83,7 +83,7 @@ public class ChatCommand {
                 continue;
             } else if (!actionPossibleModifiers.contains(strModifier)) {
                 processingContext.addMessages(
-                        MessageFormat.format("Token \"{0}\" was ignored because it is not a valid modifier for action \"{1}\"", indexedToken.getValue2(), this.action.toString()),
+                        MessageFormat.format("Token \"{0}\" was ignored because it is not a valid modifier for action \"{1}\"", indexedToken.getValue2(), this.actionHandler.toString()),
                         ProcessingContext.MessageType.PARSING_WARNING
                 );
 
@@ -92,8 +92,8 @@ public class ChatCommand {
             }
 
 
-            Enum<?> actionModifierEnumerator = this.action.getActionModifierEnumerator(strModifier);
-            Modifier<? extends Enum<?>, ? extends Number> modifier = this.action.getModifier(actionModifierEnumerator);
+            Enum<?> actionModifierEnumerator = this.actionHandler.getModifierEnumerator(strModifier);
+            Modifier<? extends Enum<?>, ? extends Number> modifier = this.actionHandler.getModifier(actionModifierEnumerator);
             if (this.modifierMap.containsKey(actionModifierEnumerator)) {
                 processingContext.addMessages(
                         MessageFormat.format("Modifier \"{0}\" was ignored because it is already present", actionModifierEnumerator.toString()),
@@ -137,8 +137,8 @@ public class ChatCommand {
 
 
         for (String possibleModifier : actionPossibleModifiers) {
-            Enum<?> actionModifierEnumerator = this.action.getActionModifierEnumerator(possibleModifier);
-            Modifier<? extends Enum<?>, ? extends Number> modifier = this.action.getModifier(actionModifierEnumerator);
+            Enum<?> actionModifierEnumerator = this.actionHandler.getModifierEnumerator(possibleModifier);
+            Modifier<? extends Enum<?>, ? extends Number> modifier = this.actionHandler.getModifier(actionModifierEnumerator);
 
             if (!modifier.getIsSwitchModifier() && !this.modifierMap.containsKey(actionModifierEnumerator)) {
                 this.modifierMap.putIfAbsent(
@@ -511,8 +511,8 @@ public class ChatCommand {
         return true;
     }
 
-    public ActionHandler getAction() {
-        return this.action;
+    public ActionHandler getActionHandler() {
+        return this.actionHandler;
     }
 
     public ModifierMap getModifierMap() {
