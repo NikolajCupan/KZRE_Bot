@@ -1,8 +1,8 @@
 package org.action;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import org.utility.Helper;
 import org.parsing.Modifier;
+import org.utility.Helper;
 import org.utility.ProcessingContext;
 import org.parsing.ChatCommand;
 

@@ -2,7 +2,6 @@ package org.utility;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class ProcessingContext {
     private final List<Message> messages;
@@ -18,7 +17,7 @@ public class ProcessingContext {
     public List<Message> getMessages(List<MessageType> messageTypes) {
         return this.messages.stream()
                 .filter(element -> messageTypes.contains(element.messageType))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public boolean hasErrorMessage() {

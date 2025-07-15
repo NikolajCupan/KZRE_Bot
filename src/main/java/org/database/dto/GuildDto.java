@@ -20,7 +20,7 @@ public class GuildDto {
         this.snowflakeGuild = snowflakeGuild;
     }
 
-    public static GuildDto getGuild(Session session, String snowflakeGuild) {
+    public static GuildDto getGuild(String snowflakeGuild, Session session) {
         String sql = "SELECT * FROM " + GuildDto.GUILD_TABLE_NAME + " WHERE "
                 + GuildDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild";
 
@@ -29,7 +29,7 @@ public class GuildDto {
                 .getSingleResultOrNull();
     }
 
-    public static boolean guildExists(Session session, String snowflakeGuild) {
+    public static boolean guildExists(String snowflakeGuild, Session session) {
         String sql = "SELECT * FROM " + GuildDto.GUILD_TABLE_NAME + " WHERE "
                 + GuildDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild";
 

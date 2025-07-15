@@ -162,9 +162,8 @@ public class ChatCommand {
 
         int splitIndex = content.indexOf(' ');
         String firstToken = (splitIndex == -1) ? content : content.substring(1, splitIndex);
-        String firstTokenAction = firstToken.toUpperCase();
 
-        return registeredActionHandlers.containsKey(firstTokenAction);
+        return registeredActionHandlers.containsKey(firstToken.toUpperCase());
     }
 
     private static ActionHandler parseAction(String content, Map<String, ActionHandler> registeredActionHandlers) {

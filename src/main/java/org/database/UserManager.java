@@ -16,7 +16,7 @@ public class UserManager {
 
         try {
             String snowflake = event.getMessage().getAuthor().getId();
-            if (!UserDto.userExists(session, snowflake)) {
+            if (!UserDto.userExists(snowflake, session)) {
                 UserDto newUser = new UserDto(snowflake);
                 session.persist(newUser);
             }

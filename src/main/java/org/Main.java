@@ -1,5 +1,10 @@
 package org;
 
+import com.dynatrace.hash4j.hashing.Hashing;
+import com.dynatrace.hash4j.similarity.ElementHashProvider;
+import com.dynatrace.hash4j.similarity.SimilarityHashPolicy;
+import com.dynatrace.hash4j.similarity.SimilarityHasher;
+import com.dynatrace.hash4j.similarity.SimilarityHashing;
 import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -47,12 +52,12 @@ public class Main {
         api.addEventListener(new MessageListener());
     }
 
-    public static void parseCommandLineArguments(String[] arguments) {
+    private static void parseCommandLineArguments(String[] arguments) {
         Main.COMMAND_LINE_ARGUMENTS = new ArrayList<>();
         Collections.addAll(Main.COMMAND_LINE_ARGUMENTS, arguments);
     }
 
-    public static void initializeDatabase() {
+    private static void initializeDatabase() {
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
 

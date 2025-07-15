@@ -10,9 +10,7 @@ import org.hibernate.Transaction;
 import org.hibernate.exception.ConstraintViolationException;
 import org.parsing.ChatCommand;
 import org.parsing.Modifier;
-import org.utility.Helper;
-import org.utility.ProcessingContext;
-import org.utility.TypedValue;
+import org.utility.*;
 
 import java.text.MessageFormat;
 import java.util.*;
@@ -117,12 +115,15 @@ public class Quote extends ActionHandler {
         }
 
 
-        String trimmedNormalizedNewTag = chatNewTag.getTrimmedNormalizedUsedValue(processingContext);
+        String trimmedNormalizedNewTag = chatNewTag.getTrimmedNormalizedLowercaseUsedValue(processingContext);
+        Check.isInRange(trimmedNormalizedNewTag.length(), 1, Constants.TAG_MAX_LENGTH, true, "Tag length ");
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
 
         try {
+            List<TagDto> similarTags = TagDto.findSimilarTags(trimmedNormalizedNewTag, event.getGuild().getId(), session);
+
             TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), trimmedNormalizedNewTag);
             session.persist(newTag);
 

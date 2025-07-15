@@ -20,7 +20,7 @@ public class UserDto {
         this.snowflakeUser = snowflakeUser;
     }
 
-    public static UserDto getUser(Session session, String snowflakeUser) {
+    public static UserDto getUser(String snowflakeUser, Session session) {
         String sql = "SELECT * FROM " + UserDto.USER_TABLE_NAME + " WHERE "
                 + UserDto.SNOWFLAKE_USER_COLUMN_NAME + " = :p_snowflakeUser";
 
@@ -29,7 +29,7 @@ public class UserDto {
                 .getSingleResultOrNull();
     }
 
-    public static boolean userExists(Session session, String snowflakeUser) {
+    public static boolean userExists(String snowflakeUser, Session session) {
         String sql = "SELECT * FROM " + UserDto.USER_TABLE_NAME + " WHERE "
                 + UserDto.SNOWFLAKE_USER_COLUMN_NAME + " = :p_snowflakeUser";
 

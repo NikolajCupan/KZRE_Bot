@@ -16,7 +16,7 @@ public class GuildManager {
 
         try {
             String snowflake = event.getMessage().getGuild().getId();
-            if (!GuildDto.guildExists(session, snowflake)) {
+            if (!GuildDto.guildExists(snowflake, session)) {
                 GuildDto newGuild = new GuildDto(snowflake);
                 session.persist(newGuild);
             }

@@ -1,8 +1,12 @@
 package org.database.dto;
 
+import info.debatty.java.stringsimilarity.NormalizedLevenshtein;
 import jakarta.persistence.*;
+import org.hibernate.Session;
+import org.utility.Constants;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(
@@ -47,6 +51,19 @@ public class TagDto {
         this.snowflakeAuthor = snowflakeAuthor;
         this.snowflakeGuild = snowflakeGuild;
         this.tag = tag;
+    }
+
+    public static List<TagDto> findSimilarTags(String newTag, String snowflakeGuild, Session session) {
+        String sql = "SELECT * FROM " + TagDto.TAG_TABLE_NAME + " WHERE "
+                + TagDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild";
+        List<TagDto> tags = session.createNativeQuery(sql, TagDto.class)
+                .setParameter("p_snowflakeGuild", snowflakeGuild)
+                .getResultList();
+
+        NormalizedLevenshtein levenshtein = new NormalizedLevenshtein();
+        return tags.stream()
+                .filter(tag -> levenshtein.distance(tag.getTag(), newTag) <= Constants.LEVENSHTEIN_DISTANCE_WARNING_THRESHOLD)
+                .toList();
     }
 
     public String getTag() {

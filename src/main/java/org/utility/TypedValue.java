@@ -62,6 +62,17 @@ public class TypedValue {
         return normalizedUsedValue;
     }
 
+    public String getTrimmedNormalizedLowercaseUsedValue(ProcessingContext processingContext) {
+        String normalizedUsedValue = this.getTrimmedNormalizedUsedValue(processingContext);
+        String lowercaseUsedValue = normalizedUsedValue.toLowerCase();
+
+        if (!normalizedUsedValue.equals(lowercaseUsedValue)) {
+            processingContext.addMessages("Uppercase letters were converted to lowercase", ProcessingContext.MessageType.WARNING);
+        }
+
+        return lowercaseUsedValue;
+    }
+
     public TypedValue.Type getType() {
         return this.type;
     }
