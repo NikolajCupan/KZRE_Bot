@@ -4,7 +4,7 @@ import info.debatty.java.stringsimilarity.NormalizedLevenshtein;
 import jakarta.persistence.*;
 import org.database.Persistable;
 import org.hibernate.Session;
-import org.hibernate.exception.ConstraintViolationException;
+import org.javatuples.Pair;
 import org.utility.Constants;
 import org.utility.ProcessingContext;
 
@@ -57,7 +57,18 @@ public class TagDto implements Persistable {
         this.tag = tag;
     }
 
-    public static List<TagDto> findSimilarTags(String newTag, String snowflakeGuild, Session session) {
+    public static boolean tagExists(String newTag, String snowflakeGuild, Session session) {
+        String sql = "SELECT * FROM " + TagDto.TAG_TABLE_NAME + " WHERE "
+                + TagDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild AND "
+                + TagDto.TAG_COLUMN_NAME + " = :p_tag LIMIT 1";
+
+        return session.createNativeQuery(sql, TagDto.class)
+                .setParameter("p_snowflakeGuild", snowflakeGuild)
+                .setParameter("p_tag", newTag)
+                .getSingleResultOrNull() != null;
+    }
+
+    public static List<Pair<Double, TagDto>> findSimilarTags(String newTag, String snowflakeGuild, Session session) {
         String sql = "SELECT * FROM " + TagDto.TAG_TABLE_NAME + " WHERE "
                 + TagDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild";
         List<TagDto> tags = session.createNativeQuery(sql, TagDto.class)
@@ -66,31 +77,25 @@ public class TagDto implements Persistable {
 
         NormalizedLevenshtein levenshtein = new NormalizedLevenshtein();
         return tags.stream()
-                .filter(tag -> levenshtein.distance(tag.getTag(), newTag) <= Constants.LEVENSHTEIN_DISTANCE_WARNING_THRESHOLD)
+                .map(tag -> new Pair<>(levenshtein.distance(tag.getTag(), newTag), tag))
+                .filter(pair -> pair.getValue0() <= Constants.LEVENSHTEIN_DISTANCE_WARNING_THRESHOLD)
                 .toList();
     }
 
     @Override
     public void persist(ProcessingContext processingContext, Session session) {
-        try {
-            session.persist(this);
+        session.persist(this);
 
-            processingContext.addMessages(
-                    MessageFormat.format("New tag \"{0}\" was successfully created", this.getTag()),
-                    ProcessingContext.MessageType.SUCCESS_RESULT
-            );
-        } catch (ConstraintViolationException exception) {
-            processingContext.addMessages(
-                    MessageFormat.format("Tag \"{0}\" already exists", this.getTag()),
-                    ProcessingContext.MessageType.ERROR
-            );
-        }
+        processingContext.addMessages(
+                MessageFormat.format("New tag \"{0}\" was successfully created", this.getTag()),
+                ProcessingContext.MessageType.SUCCESS_RESULT
+        );
     }
 
     @Override
     public void rejectPersist(ProcessingContext processingContext) {
         processingContext.addMessages(
-                MessageFormat.format("Creation of tag \"{0}\" was rejected", this.getTag()),
+                MessageFormat.format("Creation of tag \"{0}\" was declined", this.getTag()),
                 ProcessingContext.MessageType.INFO_RESULT
         );
     }

@@ -7,10 +7,13 @@ import org.exception.CustomException;
 import org.exception.InvalidActionArgumentException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.javatuples.Pair;
 import org.parsing.ChatCommand;
+import org.parsing.ChatConfirmation;
 import org.parsing.Modifier;
 import org.utility.*;
 
+import java.text.MessageFormat;
 import java.util.*;
 
 public class Quote extends ActionHandler {
@@ -120,12 +123,59 @@ public class Quote extends ActionHandler {
         Transaction transaction = session.beginTransaction();
 
         try {
+            if (TagDto.tagExists(trimmedNormalizedNewTag, event.getGuild().getId(),session)) {
+                throw new InvalidActionArgumentException(MessageFormat.format("Tag \"{0}\" already exists", trimmedNormalizedNewTag));
+            }
+
             TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), trimmedNormalizedNewTag);
-            List<TagDto> similarTags = TagDto.findSimilarTags(trimmedNormalizedNewTag, event.getGuild().getId(), session);
+            List<Pair<Double, TagDto>> similarTags = TagDto.findSimilarTags(trimmedNormalizedNewTag, event.getGuild().getId(), session);
+
+            int displayedSimilarTags = 5;
+            List<Pair<Double, TagDto>> sortedSimilarTags = similarTags.stream()
+                    .sorted(Comparator.comparing(Pair::getValue0))
+                    .limit(displayedSimilarTags)
+                    .toList();
 
             if (!similarTags.isEmpty()) {
                 MessageListener.addConfirmationMessageListener(event, newTag);
-                processingContext.addMessages("Similar tags found, confirmation needed", ProcessingContext.MessageType.INFO_RESULT);
+
+                StringBuilder stringBuilder = new StringBuilder();
+                sortedSimilarTags.stream().limit(displayedSimilarTags).forEach(pair ->
+                        stringBuilder.append("Similarity: ").append(Helper.formatDecimalNumber(100 - pair.getValue0() * 100, 2))
+                                .append(" %, tag: ").append(pair.getValue1().getTag()).append("\n")
+                );
+
+                if (similarTags.size() == 1) {
+                    processingContext.addMessages(
+                            MessageFormat.format("Similar tag detected, confirm action by replying \"{0}\" or \"{1}\":\n{2}",
+                                    ChatConfirmation.Status.YES.toString(),
+                                    ChatConfirmation.Status.NO.toString(),
+                                    stringBuilder.toString()
+                            ),
+                            ProcessingContext.MessageType.INFO_RESULT
+                    );
+                } else if (similarTags.size() <= 5) {
+                    processingContext.addMessages(
+                            MessageFormat.format("Multiple similar tags found ({0}), confirm action by replying \"{1}\" or \"{2}\":\n{3}",
+                                    similarTags.size(),
+                                    ChatConfirmation.Status.YES.toString(),
+                                    ChatConfirmation.Status.NO.toString(),
+                                    stringBuilder.toString()
+                            ),
+                            ProcessingContext.MessageType.INFO_RESULT
+                    );
+                } else {
+                    processingContext.addMessages(
+                            MessageFormat.format("Multiple similar tags found ({0}), confirm action by replying \"{1}\" or \"{2}\", showing first {3}:\n{4}",
+                                    similarTags.size(),
+                                    ChatConfirmation.Status.YES.toString(),
+                                    ChatConfirmation.Status.NO.toString(),
+                                    displayedSimilarTags,
+                                    stringBuilder.toString()
+                            ),
+                            ProcessingContext.MessageType.INFO_RESULT
+                    );
+                }
             } else {
                 newTag.persist(processingContext, session);
             }
