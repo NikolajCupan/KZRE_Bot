@@ -2,9 +2,13 @@ package org.database.dto;
 
 import info.debatty.java.stringsimilarity.NormalizedLevenshtein;
 import jakarta.persistence.*;
+import org.database.Persistable;
 import org.hibernate.Session;
+import org.hibernate.exception.ConstraintViolationException;
 import org.utility.Constants;
+import org.utility.ProcessingContext;
 
+import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -15,7 +19,7 @@ import java.util.List;
                 @UniqueConstraint(columnNames = {TagDto.SNOWFLAKE_GUILD_COLUMN_NAME, TagDto.TAG_COLUMN_NAME})
         }
 )
-public class TagDto {
+public class TagDto implements Persistable {
     public static final String TAG_TABLE_NAME = "tag";
 
     public static final String ID_TAG_COLUMN_NAME = "id_tag";
@@ -64,6 +68,31 @@ public class TagDto {
         return tags.stream()
                 .filter(tag -> levenshtein.distance(tag.getTag(), newTag) <= Constants.LEVENSHTEIN_DISTANCE_WARNING_THRESHOLD)
                 .toList();
+    }
+
+    @Override
+    public void persist(ProcessingContext processingContext, Session session) {
+        try {
+            session.persist(this);
+
+            processingContext.addMessages(
+                    MessageFormat.format("New tag \"{0}\" was successfully created", this.getTag()),
+                    ProcessingContext.MessageType.SUCCESS_RESULT
+            );
+        } catch (ConstraintViolationException exception) {
+            processingContext.addMessages(
+                    MessageFormat.format("Tag \"{0}\" already exists", this.getTag()),
+                    ProcessingContext.MessageType.ERROR
+            );
+        }
+    }
+
+    @Override
+    public void rejectPersist(ProcessingContext processingContext) {
+        processingContext.addMessages(
+                MessageFormat.format("Creation of tag \"{0}\" was rejected", this.getTag()),
+                ProcessingContext.MessageType.INFO_RESULT
+        );
     }
 
     public String getTag() {

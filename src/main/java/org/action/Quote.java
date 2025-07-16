@@ -7,12 +7,10 @@ import org.exception.CustomException;
 import org.exception.InvalidActionArgumentException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
-import org.hibernate.exception.ConstraintViolationException;
 import org.parsing.ChatCommand;
 import org.parsing.Modifier;
 import org.utility.*;
 
-import java.text.MessageFormat;
 import java.util.*;
 
 public class Quote extends ActionHandler {
@@ -122,20 +120,15 @@ public class Quote extends ActionHandler {
         Transaction transaction = session.beginTransaction();
 
         try {
+            TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), trimmedNormalizedNewTag);
             List<TagDto> similarTags = TagDto.findSimilarTags(trimmedNormalizedNewTag, event.getGuild().getId(), session);
 
-            TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), trimmedNormalizedNewTag);
-            session.persist(newTag);
-
-            processingContext.addMessages(
-                    MessageFormat.format("New tag \"{0}\" was successfully created", trimmedNormalizedNewTag),
-                    ProcessingContext.MessageType.SUCCESS_RESULT
-            );
-        } catch (ConstraintViolationException exception) {
-            processingContext.addMessages(
-                    MessageFormat.format("Tag \"{0}\" already exists", trimmedNormalizedNewTag),
-                    ProcessingContext.MessageType.ERROR
-            );
+            if (!similarTags.isEmpty()) {
+                MessageListener.addConfirmationMessageListener(event, newTag);
+                processingContext.addMessages("Similar tags found, confirmation needed", ProcessingContext.MessageType.INFO_RESULT);
+            } else {
+                newTag.persist(processingContext, session);
+            }
         } finally {
             transaction.commit();
             session.close();

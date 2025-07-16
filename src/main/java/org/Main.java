@@ -1,14 +1,10 @@
 package org;
 
-import com.dynatrace.hash4j.hashing.Hashing;
-import com.dynatrace.hash4j.similarity.ElementHashProvider;
-import com.dynatrace.hash4j.similarity.SimilarityHashPolicy;
-import com.dynatrace.hash4j.similarity.SimilarityHasher;
-import com.dynatrace.hash4j.similarity.SimilarityHashing;
 import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import org.action.ActionMessageListener;
 import org.apache.ibatis.jdbc.ScriptRunner;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -23,17 +19,16 @@ import java.text.MessageFormat;
 import java.util.*;
 
 public class Main {
-    public static List<String> COMMAND_LINE_ARGUMENTS;
-    public static Dotenv DOTENV;
-    public static SessionFactory DATABASE_SESSION_FACTORY;
+    public static final List<String> COMMAND_LINE_ARGUMENTS;
+    public static final Dotenv DOTENV;
+    public static final SessionFactory DATABASE_SESSION_FACTORY;
+    public static final JDA JDA_API;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
+    private static final Logger LOGGER;
 
-    public static void main(String[] args) {
-        Main.parseCommandLineArguments(args);
-        Main.DOTENV = Dotenv.load();
-
-        TimeZone.setDefault(TimeZone.getTimeZone(Main.DOTENV.get("TIME_ZONE")));
+    static {
+        COMMAND_LINE_ARGUMENTS = new ArrayList<>();
+        DOTENV = Dotenv.load();
 
         Configuration configuration = new Configuration().configure("hibernate.cfg.xml");
         configuration.setProperty(
@@ -42,18 +37,24 @@ public class Main {
         );
         configuration.setProperty("hibernate.hikari.dataSource.user", Main.DOTENV.get("DATABASE_USER"));
         configuration.setProperty("hibernate.hikari.dataSource.password", Main.DOTENV.get("DATABASE_PASSWORD"));
-        Main.DATABASE_SESSION_FACTORY = configuration.buildSessionFactory();
-        Main.initializeDatabase();
-
-        JDA api = JDABuilder.createDefault(Main.DOTENV.get("TOKEN"))
+        DATABASE_SESSION_FACTORY = configuration.buildSessionFactory();
+        JDA_API = JDABuilder.createDefault(Main.DOTENV.get("TOKEN"))
                 .enableIntents(GatewayIntent.MESSAGE_CONTENT)
                 .build();
 
-        api.addEventListener(new MessageListener());
+        LOGGER = LoggerFactory.getLogger(Main.class);
+    }
+
+    public static void main(String[] args) {
+        TimeZone.setDefault(TimeZone.getTimeZone(Main.DOTENV.get("TIME_ZONE")));
+
+        Main.parseCommandLineArguments(args);
+        Main.initializeDatabase();
+
+        Main.JDA_API.addEventListener(new ActionMessageListener());
     }
 
     private static void parseCommandLineArguments(String[] arguments) {
-        Main.COMMAND_LINE_ARGUMENTS = new ArrayList<>();
         Collections.addAll(Main.COMMAND_LINE_ARGUMENTS, arguments);
     }
 
