@@ -82,6 +82,8 @@ public class Quote extends ActionHandler {
                 case OrderArgument.RANDOM -> sqlOrder = "rand()";
                 case OrderArgument.NEWEST -> sqlOrder = TagDto.DATE_MODIFIED_COLUMN_NAME + " desc";
                 case OrderArgument.OLDEST -> sqlOrder = TagDto.DATE_MODIFIED_COLUMN_NAME + " asc";
+                case OrderArgument.ALPHABETICAL -> sqlOrder = TagDto.TAG_COLUMN_NAME + " asc";
+                case OrderArgument.REVERSE_ALPHABETICAL -> sqlOrder = TagDto.TAG_COLUMN_NAME + " desc";
             }
 
             String sql = "SELECT * FROM " + TagDto.TAG_TABLE_NAME + " WHERE "
@@ -204,6 +206,6 @@ public class Quote extends ActionHandler {
     public enum ActionModifier { TYPE, TAG, ORDER, COUNT, VALUE }
 
     private enum TypeArgument { GET_QUOTE, GET_TAG, NEW_QUOTE, NEW_TAG }
-    private enum OrderArgument { RANDOM, NEWEST, OLDEST }
+    private enum OrderArgument { RANDOM, NEWEST, OLDEST, ALPHABETICAL, REVERSE_ALPHABETICAL }
     private enum CountArgument { ALL }
 }
