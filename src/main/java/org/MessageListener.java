@@ -7,49 +7,86 @@ import org.action.ConfirmationMessageListener;
 import org.database.GuildManager;
 import org.database.Persistable;
 import org.database.UserManager;
+import org.javatuples.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.utility.Constants;
 import org.utility.ProcessingContext;
 
 import java.awt.*;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.*;
 import java.util.List;
-import java.util.Set;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class MessageListener extends ListenerAdapter {
-    private static final UserManager USER_MANAGER;
-    private static final GuildManager GUILD_MANAGER;
-    private static final Set<ConfirmationKey> PENDING_CONFIRMATIONS;
+    private static final UserManager USER_MANAGER;// TODO: remove this class
+    private static final GuildManager GUILD_MANAGER;// TODO: remove this class
+    private static final Map<ConfirmationKey, ScheduledFuture<?>> PENDING_LISTENERS_REMOVALS;
+
+    private static final ScheduledExecutorService EXECUTOR_SERVICE;
 
     static {
         USER_MANAGER = new UserManager();
         GUILD_MANAGER = new GuildManager();
-        PENDING_CONFIRMATIONS = Collections.synchronizedSet(new HashSet<>());
+        PENDING_LISTENERS_REMOVALS = Collections.synchronizedMap(new TreeMap<>(new MessageListener.ConfirmationKey.ConfirmationKeyComparator()));
+
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
+        executor.setRemoveOnCancelPolicy(true);
+        EXECUTOR_SERVICE = Executors.unconfigurableScheduledExecutorService(executor);
+        Runtime.getRuntime().addShutdownHook(new Thread(MessageListener.EXECUTOR_SERVICE::shutdownNow));
     }
 
     public static void addConfirmationMessageListener(MessageReceivedEvent event, Persistable objectToStore) {
         ConfirmationKey confirmationKey = new ConfirmationKey(event.getChannel().getId(), event.getAuthor().getId());
-        if (MessageListener.PENDING_CONFIRMATIONS.contains(confirmationKey)) {
-            throw new RuntimeException("The confirmation key is already present in the set");
-        }
 
-        MessageListener.PENDING_CONFIRMATIONS.add(confirmationKey);
-        Main.JDA_API.addEventListener(new ConfirmationMessageListener(event.getChannel().getId(), event.getAuthor().getId(), objectToStore));
+        synchronized (confirmationKey.acquireLock()) {
+            try {
+                if (MessageListener.PENDING_LISTENERS_REMOVALS.containsKey(confirmationKey)) {
+                    throw new RuntimeException("The confirmation key is already present in the set");
+                }
+
+                ConfirmationMessageListener confirmationMessageListener =
+                        new ConfirmationMessageListener(event.getChannel().getId(), event.getAuthor().getId(), objectToStore);
+
+                Main.JDA_API.addEventListener(confirmationMessageListener);
+                ScheduledFuture<?> scheduledFuture = MessageListener.EXECUTOR_SERVICE.schedule(
+                        () -> MessageListener.removeConfirmationMessageListener(confirmationMessageListener), 5000, TimeUnit.MILLISECONDS
+                );
+                MessageListener.PENDING_LISTENERS_REMOVALS.put(confirmationKey, scheduledFuture);
+            } finally {
+                confirmationKey.releaseLock();
+            }
+        }
     }
 
     public static void removeConfirmationMessageListener(ConfirmationMessageListener messageListener) {
         ConfirmationKey confirmationKey = new ConfirmationKey(messageListener.getChannelId(), messageListener.getUserId());
-        if (!MessageListener.PENDING_CONFIRMATIONS.contains(confirmationKey)) {
-            throw new RuntimeException("The confirmation key is not present in the set");
-        }
 
-        MessageListener.PENDING_CONFIRMATIONS.remove(confirmationKey);
-        Main.JDA_API.removeEventListener(messageListener);
+        synchronized (confirmationKey.acquireLock()) {
+            try {
+                if (!MessageListener.PENDING_LISTENERS_REMOVALS.containsKey(confirmationKey)) {
+                    return;
+                    // throw new RuntimeException("The confirmation key is not present in the set");
+                }
+
+                ScheduledFuture<?> scheduledFuture = MessageListener.PENDING_LISTENERS_REMOVALS.remove(confirmationKey);
+                scheduledFuture.cancel(false);
+                Main.JDA_API.removeEventListener(messageListener);
+            } finally {
+                confirmationKey.releaseLock();
+            }
+        }
     }
 
     public static boolean confirmationKeyExists(String channelId, String userId) {
-        return MessageListener.PENDING_CONFIRMATIONS.contains(new ConfirmationKey(channelId, userId));
+        ConfirmationKey confirmationKey = new ConfirmationKey(channelId, userId);
+        synchronized (confirmationKey.acquireLock()) {
+            try {
+                return MessageListener.PENDING_LISTENERS_REMOVALS.containsKey(new ConfirmationKey(channelId, userId));
+            } finally {
+                confirmationKey.releaseLock();
+            }
+        }
     }
 
     private static void beforeMessageProcessed(MessageReceivedEvent event) {
@@ -109,5 +146,62 @@ public abstract class MessageListener extends ListenerAdapter {
         MessageListener.afterMessageProcessed(event, embedBuilder, processingContext, verboseResponse);
     }
 
-    private record ConfirmationKey(String channelId, String userId) {}
+    private static class ConfirmationKey {
+        private static final Map<Pair<String, String>, ConfirmationKey.Lock> LOCKS;
+
+        static {
+            LOCKS = Collections.synchronizedMap(new HashMap<>());
+        }
+
+        private final Pair<String, String> key;
+
+        public ConfirmationKey(String channelId, String userId) {
+            this.key = new Pair<>(channelId, userId);
+        }
+
+        public Object acquireLock() {
+            return ConfirmationKey.LOCKS.computeIfAbsent(this.key, _ -> new Lock()).getLock();
+        }
+
+        public void releaseLock() {
+            ConfirmationKey.LOCKS.computeIfPresent(this.key, (_, lock) -> {
+                if (lock.getReferenceCount().decrementAndGet() <= 0) {
+                    return null;
+                }
+
+                return lock;
+            });
+        }
+
+        public Pair<String, String> getKey() {
+            return this.key;
+        }
+
+        public static class ConfirmationKeyComparator implements Comparator<ConfirmationKey> {
+            @Override
+            public int compare(ConfirmationKey lhs, ConfirmationKey rhs) {
+                int comparison = lhs.getKey().getValue0().compareTo(rhs.getKey().getValue0());
+                return comparison != 0 ? comparison : lhs.getKey().getValue1().compareTo(rhs.getKey().getValue1());
+            }
+        }
+
+        private static class Lock {
+            private final AtomicInteger referenceCount;
+            private final Object lock;
+
+            public Lock() {
+                this.referenceCount = new AtomicInteger(0);
+                this.lock = new Object();
+            }
+
+            public AtomicInteger getReferenceCount() {
+                return this.referenceCount;
+            }
+
+            public Object getLock() {
+                this.referenceCount.incrementAndGet();
+                return this.lock;
+            }
+        }
+    }
 }
