@@ -20,13 +20,11 @@ public class UserDto {
         this.snowflakeUser = snowflakeUser;
     }
 
-    public static UserDto getUser(String snowflakeUser, Session session) {
-        String sql = "SELECT * FROM " + UserDto.USER_TABLE_NAME + " WHERE "
-                + UserDto.SNOWFLAKE_USER_COLUMN_NAME + " = :p_snowflakeUser";
-
-        return session.createNativeQuery(sql, UserDto.class)
-                .setParameter("p_snowflakeUser", snowflakeUser)
-                .getSingleResultOrNull();
+    public static void refreshUser(String snowflakeUser, Session session) {
+        if (!UserDto.userExists(snowflakeUser, session)) {
+            UserDto newUser = new UserDto(snowflakeUser);
+            session.persist(newUser);
+        }
     }
 
     public static boolean userExists(String snowflakeUser, Session session) {

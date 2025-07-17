@@ -89,7 +89,7 @@ public class Quote extends ActionHandler {
                     + sqlOrder + " LIMIT :p_resultsCount";
 
             List<TagDto> tags = session.createNativeQuery(sql, TagDto.class)
-                    .setParameter("p_snowflakeGuild", event.getMessage().getGuild().getId())
+                    .setParameter("p_snowflakeGuild", event.getGuild().getId())
                     .setParameter("p_resultsCount", resultsCount)
                     .getResultList();
 

@@ -20,13 +20,11 @@ public class GuildDto {
         this.snowflakeGuild = snowflakeGuild;
     }
 
-    public static GuildDto getGuild(String snowflakeGuild, Session session) {
-        String sql = "SELECT * FROM " + GuildDto.GUILD_TABLE_NAME + " WHERE "
-                + GuildDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild";
-
-        return session.createNativeQuery(sql, GuildDto.class)
-                .setParameter("p_snowflakeGuild", snowflakeGuild)
-                .getSingleResultOrNull();
+    public static void refreshGuild(String snowflakeGuild, Session session) {
+        if (!GuildDto.guildExists(snowflakeGuild, session)) {
+            GuildDto newGuild = new GuildDto(snowflakeGuild);
+            session.persist(newGuild);
+        }
     }
 
     public static boolean guildExists(String snowflakeGuild, Session session) {

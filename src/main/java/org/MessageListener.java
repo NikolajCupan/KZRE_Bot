@@ -4,8 +4,10 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import org.database.GuildManager;
-import org.database.UserManager;
+import org.database.dto.GuildDto;
+import org.database.dto.UserDto;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.javatuples.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.utility.Constants;
@@ -17,14 +19,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class MessageListener extends ListenerAdapter {
-    private static final UserManager USER_MANAGER;// TODO: remove this class
-    private static final GuildManager GUILD_MANAGER;// TODO: remove this class
-
-    static {
-        USER_MANAGER = new UserManager();
-        GUILD_MANAGER = new GuildManager();
-    }
-
     protected static void returnResponse(MessageChannel channel, EmbedBuilder embedBuilder) {
         if (!embedBuilder.isEmpty()) {
             channel.sendMessageEmbeds(embedBuilder.build()).queue();
@@ -32,8 +26,16 @@ public abstract class MessageListener extends ListenerAdapter {
     }
 
     private static void beforeMessageProcessed(MessageReceivedEvent event) {
-        MessageListener.USER_MANAGER.refreshUser(event);
-        MessageListener.GUILD_MANAGER.refreshGuild(event);
+        Session session = Main.DATABASE_SESSION_FACTORY.openSession();
+        Transaction transaction = session.beginTransaction();
+
+        try {
+            GuildDto.refreshGuild(event.getGuild().getId(), session);
+            UserDto.refreshUser(event.getAuthor().getId(), session);
+        } finally {
+            transaction.commit();
+            session.close();
+        }
     }
 
     private static void afterMessageProcessed(
