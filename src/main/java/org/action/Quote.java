@@ -136,7 +136,8 @@ public class Quote extends ActionHandler {
                     .limit(displayedSimilarTags)
                     .toList();
 
-            if (!similarTags.isEmpty()) {
+            boolean forceSwitchPresent = chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.FORCE);
+            if (!similarTags.isEmpty() && !forceSwitchPresent) {
                 int timeToConfirmSeconds = ConfirmationMessageListener.addConfirmationMessageListener(
                         event, newTag, Constants.CONFIRMATION_ATTEMPTS
                 );
@@ -183,6 +184,16 @@ public class Quote extends ActionHandler {
                 }
             } else {
                 newTag.persist(processingContext, session);
+
+                if (!similarTags.isEmpty() && forceSwitchPresent) {
+                    processingContext.addMessages(
+                            MessageFormat.format(
+                                    "Similar tag(s) were detected, action would normally require confirmation, however, since \"{0}\" switch modifier was used, the action was executed immediately",
+                                    ActionHandler.GlobalActionModifier.FORCE.toString()
+                            ),
+                            ProcessingContext.MessageType.WARNING
+                    );
+                }
             }
         } finally {
             transaction.commit();
