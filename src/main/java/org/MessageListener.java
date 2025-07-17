@@ -19,9 +19,19 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class MessageListener extends ListenerAdapter {
-    protected static void returnResponse(MessageChannel channel, EmbedBuilder embedBuilder) {
-        if (!embedBuilder.isEmpty()) {
-            channel.sendMessageEmbeds(embedBuilder.build()).queue();
+    protected static void returnResponse(MessageChannel channel, EmbedBuilder embedBuilder, boolean keepHeaders) {
+        EmbedBuilder processedEmbedBuilder = new EmbedBuilder(embedBuilder);
+
+        if (!keepHeaders) {
+            processedEmbedBuilder.clearFields();
+            embedBuilder.getFields().forEach(field -> {
+                assert field.getValue() != null;
+                processedEmbedBuilder.addField("", field.getValue(), false);
+            });
+        }
+
+        if (!processedEmbedBuilder.isEmpty()) {
+            channel.sendMessageEmbeds(processedEmbedBuilder.build()).queue();
         }
     }
 
@@ -81,12 +91,13 @@ public abstract class MessageListener extends ListenerAdapter {
         embedBuilder.setColor(Color.BLACK);
 
         Request request = new Request(event.getChannel().getId(), event.getAuthor().getId(), event.getGuild().getId());
+        boolean verboseResponse = false;
         Object lock = request.acquireLock();
         if (lock != null) {
             synchronized (lock) {
                 try {
                     MessageListener.beforeMessageProcessed(event);
-                    boolean verboseResponse = this.processMessage(event, processingContext);
+                    verboseResponse = this.processMessage(event, processingContext);
                     MessageListener.afterMessageProcessed(embedBuilder, processingContext, verboseResponse);
                 } finally {
                     request.releaseLock();
@@ -96,7 +107,7 @@ public abstract class MessageListener extends ListenerAdapter {
             processingContext.addMessages("Request could not be processed", ProcessingContext.MessageType.ERROR);
         }
 
-        MessageListener.returnResponse(event.getChannel(), embedBuilder);
+        MessageListener.returnResponse(event.getChannel(), embedBuilder, verboseResponse);
     }
 
     public static class Request {
