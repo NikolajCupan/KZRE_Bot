@@ -43,7 +43,7 @@ public abstract class ActionHandler {
         try {
             return Enum.valueOf(GlobalActionModifier.class, strModifier);
         } catch (IllegalArgumentException ignored) {
-            //noinspection unchecked, rawtypes
+            // noinspection unchecked, rawtypes
             return Enum.valueOf((Class)this.getModifierEnumClass(), strModifier);
         }
     }

@@ -1,6 +1,7 @@
 package org;
 
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.action.ConfirmationMessageListener;
@@ -21,72 +22,72 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class MessageListener extends ListenerAdapter {
     private static final UserManager USER_MANAGER;// TODO: remove this class
     private static final GuildManager GUILD_MANAGER;// TODO: remove this class
-    private static final Map<ConfirmationKey, ScheduledFuture<?>> PENDING_LISTENERS_REMOVALS;
+    private static final Map<Request, ScheduledFuture<?>> PENDING_LISTENERS_REMOVALS;
 
     private static final ScheduledExecutorService EXECUTOR_SERVICE;
 
     static {
         USER_MANAGER = new UserManager();
         GUILD_MANAGER = new GuildManager();
-        PENDING_LISTENERS_REMOVALS = Collections.synchronizedMap(new TreeMap<>(new MessageListener.ConfirmationKey.ConfirmationKeyComparator()));
+        PENDING_LISTENERS_REMOVALS = Collections.synchronizedMap(new TreeMap<>(new Request.ConfirmationKeyComparator()));
 
-        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(3);
         executor.setRemoveOnCancelPolicy(true);
         EXECUTOR_SERVICE = Executors.unconfigurableScheduledExecutorService(executor);
         Runtime.getRuntime().addShutdownHook(new Thread(MessageListener.EXECUTOR_SERVICE::shutdownNow));
     }
 
-    public static void addConfirmationMessageListener(MessageReceivedEvent event, Persistable objectToStore) {
-        ConfirmationKey confirmationKey = new ConfirmationKey(event.getChannel().getId(), event.getAuthor().getId());
+    public static void removeConfirmationMessageListener(ConfirmationMessageListener messageListener) {
+        Request request = new Request(messageListener.getChannelId(), messageListener.getUserId());
 
-        synchronized (confirmationKey.acquireLock()) {
-            try {
-                if (MessageListener.PENDING_LISTENERS_REMOVALS.containsKey(confirmationKey)) {
-                    throw new RuntimeException("The confirmation key is already present in the set");
-                }
-
-                ConfirmationMessageListener confirmationMessageListener =
-                        new ConfirmationMessageListener(event.getChannel().getId(), event.getAuthor().getId(), objectToStore);
-
-                Main.JDA_API.addEventListener(confirmationMessageListener);
-                ScheduledFuture<?> scheduledFuture = MessageListener.EXECUTOR_SERVICE.schedule(
-                        () -> MessageListener.removeConfirmationMessageListener(confirmationMessageListener), 5000, TimeUnit.MILLISECONDS
-                );
-                MessageListener.PENDING_LISTENERS_REMOVALS.put(confirmationKey, scheduledFuture);
-            } finally {
-                confirmationKey.releaseLock();
+        // noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (messageListener) {
+            if (!MessageListener.PENDING_LISTENERS_REMOVALS.containsKey(request)) {
+                // listener was already removed
+                return;
             }
+
+            ScheduledFuture<?> scheduledFuture = MessageListener.PENDING_LISTENERS_REMOVALS.remove(request);
+            scheduledFuture.cancel(true);
+            Main.JDA_API.removeEventListener(messageListener);
         }
     }
 
-    public static void removeConfirmationMessageListener(ConfirmationMessageListener messageListener) {
-        ConfirmationKey confirmationKey = new ConfirmationKey(messageListener.getChannelId(), messageListener.getUserId());
-
-        synchronized (confirmationKey.acquireLock()) {
-            try {
-                if (!MessageListener.PENDING_LISTENERS_REMOVALS.containsKey(confirmationKey)) {
-                    return;
-                    // throw new RuntimeException("The confirmation key is not present in the set");
-                }
-
-                ScheduledFuture<?> scheduledFuture = MessageListener.PENDING_LISTENERS_REMOVALS.remove(confirmationKey);
-                scheduledFuture.cancel(false);
-                Main.JDA_API.removeEventListener(messageListener);
-            } finally {
-                confirmationKey.releaseLock();
+    private static void removeConfirmationMessageListenerAfterTimeout(ConfirmationMessageListener messageListener) {
+        // noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (messageListener) {
+            if (Thread.interrupted()) {
+                // listener was already removed
+                return;
             }
+
+            MessageListener.removeConfirmationMessageListener(messageListener);
+            MessageListener.returnResponse(
+                    Main.JDA_API.getChannelById(MessageChannel.class, messageListener.getChannelId()),
+                    new EmbedBuilder().setColor(Color.BLACK)
+                            .addField(ProcessingContext.MessageType.ERROR.toString(), "Confirmation timed out", false)
+            );
         }
+    }
+
+    public static void addConfirmationMessageListener(MessageReceivedEvent event, Persistable objectToStore) {
+        Request request = new Request(event.getChannel().getId(), event.getAuthor().getId());
+        if (MessageListener.PENDING_LISTENERS_REMOVALS.containsKey(request)) {
+            throw new RuntimeException("The key is already present in the set");
+        }
+
+        ConfirmationMessageListener confirmationMessageListener =
+                new ConfirmationMessageListener(event.getChannel().getId(), event.getAuthor().getId(), objectToStore);
+
+        Main.JDA_API.addEventListener(confirmationMessageListener);
+        ScheduledFuture<?> scheduledFuture = MessageListener.EXECUTOR_SERVICE.schedule(
+                () -> MessageListener.removeConfirmationMessageListenerAfterTimeout(confirmationMessageListener), 5000, TimeUnit.MILLISECONDS
+        );
+        MessageListener.PENDING_LISTENERS_REMOVALS.put(request, scheduledFuture);
     }
 
     public static boolean confirmationKeyExists(String channelId, String userId) {
-        ConfirmationKey confirmationKey = new ConfirmationKey(channelId, userId);
-        synchronized (confirmationKey.acquireLock()) {
-            try {
-                return MessageListener.PENDING_LISTENERS_REMOVALS.containsKey(new ConfirmationKey(channelId, userId));
-            } finally {
-                confirmationKey.releaseLock();
-            }
-        }
+        return MessageListener.PENDING_LISTENERS_REMOVALS.containsKey(new Request(channelId, userId));
     }
 
     private static void beforeMessageProcessed(MessageReceivedEvent event) {
@@ -95,7 +96,7 @@ public abstract class MessageListener extends ListenerAdapter {
     }
 
     private static void afterMessageProcessed(
-            MessageReceivedEvent event, EmbedBuilder embedBuilder, ProcessingContext processingContext, boolean verboseResponse
+            EmbedBuilder embedBuilder, ProcessingContext processingContext, boolean verboseResponse
     ) {
         if (processingContext.hasParsingErrorMessage()) {
             processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_ERROR)).forEach(element ->
@@ -116,10 +117,11 @@ public abstract class MessageListener extends ListenerAdapter {
                     embedBuilder.addField(element.messageType().toString(), element.message(), false)
             );
         }
+    }
 
-
+    private static void returnResponse(MessageChannel channel, EmbedBuilder embedBuilder) {
         if (!embedBuilder.isEmpty()) {
-            event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
+            channel.sendMessageEmbeds(embedBuilder.build()).queue();
         }
     }
 
@@ -141,31 +143,61 @@ public abstract class MessageListener extends ListenerAdapter {
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setColor(Color.BLACK);
 
-        MessageListener.beforeMessageProcessed(event);
-        boolean verboseResponse = this.processMessage(event, processingContext);
-        MessageListener.afterMessageProcessed(event, embedBuilder, processingContext, verboseResponse);
+        Request request = new Request(event.getChannel().getId(), event.getAuthor().getId());
+        Object lock = request.acquireLock();
+        if (lock != null) {
+            synchronized (lock) {
+                try {
+                    MessageListener.beforeMessageProcessed(event);
+                    boolean verboseResponse = this.processMessage(event, processingContext);
+                    MessageListener.afterMessageProcessed(embedBuilder, processingContext, verboseResponse);
+                } finally {
+                    request.releaseLock();
+                }
+            }
+        } else {
+            processingContext.addMessages("Request could not be processed", ProcessingContext.MessageType.ERROR);
+        }
+
+        MessageListener.returnResponse(event.getChannel(), embedBuilder);
     }
 
-    private static class ConfirmationKey {
-        private static final Map<Pair<String, String>, ConfirmationKey.Lock> LOCKS;
+    private static class Request {
+        private static final Map<Pair<String, String>, Request.Lock> LOCKS;
 
         static {
             LOCKS = Collections.synchronizedMap(new HashMap<>());
         }
 
         private final Pair<String, String> key;
+        private boolean lockAquired;
 
-        public ConfirmationKey(String channelId, String userId) {
+        public Request(String channelId, String userId) {
             this.key = new Pair<>(channelId, userId);
+            this.lockAquired = false;
         }
 
         public Object acquireLock() {
-            return ConfirmationKey.LOCKS.computeIfAbsent(this.key, _ -> new Lock()).getLock();
+            if (this.lockAquired) {
+                throw new IllegalStateException("Lock for this request was already aquired");
+            }
+
+            Object lock = Request.LOCKS.computeIfAbsent(this.key, _ -> new Lock()).getLock();
+            if (lock != null) {
+                this.lockAquired = true;
+                return lock;
+            }
+
+            return null;
         }
 
         public void releaseLock() {
-            ConfirmationKey.LOCKS.computeIfPresent(this.key, (_, lock) -> {
-                if (lock.getReferenceCount().decrementAndGet() <= 0) {
+            if (!this.lockAquired) {
+                throw new IllegalStateException("Lock for this request was not aquired");
+            }
+
+            Request.LOCKS.computeIfPresent(this.key, (_, lock) -> {
+                if (lock.returnLock() <= 0) {
                     return null;
                 }
 
@@ -177,15 +209,21 @@ public abstract class MessageListener extends ListenerAdapter {
             return this.key;
         }
 
-        public static class ConfirmationKeyComparator implements Comparator<ConfirmationKey> {
+        public static class ConfirmationKeyComparator implements Comparator<Request> {
             @Override
-            public int compare(ConfirmationKey lhs, ConfirmationKey rhs) {
+            public int compare(Request lhs, Request rhs) {
                 int comparison = lhs.getKey().getValue0().compareTo(rhs.getKey().getValue0());
                 return comparison != 0 ? comparison : lhs.getKey().getValue1().compareTo(rhs.getKey().getValue1());
             }
         }
 
         private static class Lock {
+            private static final int MAXIMUM_NUMBER_OF_LOCKS;
+
+            static {
+                MAXIMUM_NUMBER_OF_LOCKS = 5;
+            }
+
             private final AtomicInteger referenceCount;
             private final Object lock;
 
@@ -194,13 +232,21 @@ public abstract class MessageListener extends ListenerAdapter {
                 this.lock = new Object();
             }
 
-            public AtomicInteger getReferenceCount() {
-                return this.referenceCount;
+            public synchronized int getReferenceCount() {
+                return this.referenceCount.get();
             }
 
-            public Object getLock() {
+            public synchronized Object getLock() {
+                if (this.referenceCount.get() >= Lock.MAXIMUM_NUMBER_OF_LOCKS) {
+                    return null;
+                }
+
                 this.referenceCount.incrementAndGet();
                 return this.lock;
+            }
+
+            public synchronized int returnLock() {
+                return this.referenceCount.decrementAndGet();
             }
         }
     }
