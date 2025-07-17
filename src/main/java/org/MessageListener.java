@@ -78,7 +78,7 @@ public abstract class MessageListener extends ListenerAdapter {
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setColor(Color.BLACK);
 
-        Request request = new Request(event.getChannel().getId(), event.getAuthor().getId());
+        Request request = new Request(event.getChannel().getId(), event.getAuthor().getId(), event.getGuild().getId());
         Object lock = request.acquireLock();
         if (lock != null) {
             synchronized (lock) {
@@ -105,10 +105,12 @@ public abstract class MessageListener extends ListenerAdapter {
         }
 
         private final Pair<String, String> key;
+        private final String guildId;
         private boolean lockAquired;
 
-        public Request(String channelId, String userId) {
+        public Request(String channelId, String userId, String guildId) {
             this.key = new Pair<>(channelId, userId);
+            this.guildId = guildId;
             this.lockAquired = false;
         }
 
@@ -144,11 +146,23 @@ public abstract class MessageListener extends ListenerAdapter {
             return this.key;
         }
 
-        public static class ConfirmationKeyComparator implements Comparator<Request> {
+        public String getGuildId() {
+            return this.guildId;
+        }
+
+        public static class PendingListenersRemovalsComparator implements Comparator<Request> {
             @Override
             public int compare(Request lhs, Request rhs) {
                 int comparison = lhs.getKey().getValue0().compareTo(rhs.getKey().getValue0());
                 return comparison != 0 ? comparison : lhs.getKey().getValue1().compareTo(rhs.getKey().getValue1());
+            }
+        }
+
+        public static class GuildUserLockComparator implements Comparator<Request> {
+            @Override
+            public int compare(Request lhs, Request rhs) {
+                int comparison = lhs.getKey().getValue1().compareTo(rhs.getKey().getValue1());
+                return comparison != 0 ? comparison : lhs.getGuildId().compareTo(rhs.getGuildId());
             }
         }
 

@@ -168,7 +168,7 @@ public class Quote extends ActionHandler {
                     );
                 } else {
                     processingContext.addMessages(
-                            MessageFormat.format("Multiple similar tags found ({0}), confirm action in {1} seconds by replying \"{2}\" or \"{3}\", showing first {4}:\n{5}",
+                            MessageFormat.format("Multiple similar tags found ({0}), confirm action in {1} seconds by replying \"{2}\" or \"{3}\", showing first {4} results:\n{5}",
                                     similarTags.size(),
                                     timeToConfirmSeconds,
                                     ChatConfirmation.Status.YES.toString(),

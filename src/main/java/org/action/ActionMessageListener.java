@@ -101,6 +101,16 @@ public class ActionMessageListener extends MessageListener {
             return false;
         }
 
+        String guildUserLockedChannel =
+                ConfirmationMessageListener.getGuildUserLockedChannel(event.getAuthor().getId(), event.getGuild().getId());
+        if (guildUserLockedChannel != null) {
+            processingContext.addMessages(
+                    MessageFormat.format("Please confirm the pending action in channel \"{0}\" before running another command", guildUserLockedChannel),
+                    ProcessingContext.MessageType.ERROR
+            );
+            return false;
+        }
+
 
         ActionMessageListener.LOGGER.info("Received action \"{}\"", event.getMessage().getContentRaw());
 
