@@ -137,7 +137,9 @@ public class Quote extends ActionHandler {
                     .toList();
 
             if (!similarTags.isEmpty()) {
-                int timeToConfirmSeconds = ConfirmationMessageListener.addConfirmationMessageListener(event, newTag);
+                int timeToConfirmSeconds = ConfirmationMessageListener.addConfirmationMessageListener(
+                        event, newTag, Constants.CONFIRMATION_ATTEMPTS
+                );
 
                 StringBuilder stringBuilder = new StringBuilder();
                 sortedSimilarTags.stream().limit(displayedSimilarTags).forEach(pair ->
@@ -155,7 +157,7 @@ public class Quote extends ActionHandler {
                             ),
                             ProcessingContext.MessageType.INFO_RESULT
                     );
-                } else if (similarTags.size() <= 5) {
+                } else if (similarTags.size() <= displayedSimilarTags) {
                     processingContext.addMessages(
                             MessageFormat.format("Multiple similar tags found ({0}), confirm action in {1} seconds by replying \"{2}\" or \"{3}\":\n{4}",
                                     similarTags.size(),

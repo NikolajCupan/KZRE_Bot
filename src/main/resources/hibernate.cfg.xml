@@ -7,7 +7,7 @@
         <property name="hibernate.connection.provider_class">org.hibernate.hikaricp.internal.HikariCPConnectionProvider</property>
         <property name="hibernate.hikari.dataSourceClassName">com.mysql.cj.jdbc.MysqlDataSource</property>
         <property name="hibernate.show_sql">true</property>
-        <property name="hibernate.format_sql">true</property>
+        <property name="hibernate.format_sql">false</property>
         <property name="hibernate.highlight_sql">true</property>
 
         <mapping class="org.database.dto.GuildDto"/>

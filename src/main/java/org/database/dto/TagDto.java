@@ -95,7 +95,7 @@ public class TagDto implements Persistable {
     @Override
     public void rejectPersist(ProcessingContext processingContext) {
         processingContext.addMessages(
-                MessageFormat.format("Creation of tag \"{0}\" was declined", this.getTag()),
+                MessageFormat.format("Creation of tag \"{0}\" was canceled", this.getTag()),
                 ProcessingContext.MessageType.INFO_RESULT
         );
     }

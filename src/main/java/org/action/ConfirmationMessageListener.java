@@ -43,12 +43,14 @@ public class ConfirmationMessageListener extends MessageListener {
     private final String userId;
     private final String guildId;
     private final Persistable objectToStore;
+    private Integer attemptsRemaining;
 
-    public ConfirmationMessageListener(String channelId, String userId, String guildId, Persistable objectToStore) {
+    public ConfirmationMessageListener(String channelId, String userId, String guildId, Persistable objectToStore, Integer attemptsRemaining) {
         this.channelId = channelId;
         this.userId = userId;
         this.guildId = guildId;
         this.objectToStore = objectToStore;
+        this.attemptsRemaining = attemptsRemaining;
     }
 
     public static void removeConfirmationMessageListener(ConfirmationMessageListener messageListener) {
@@ -87,7 +89,7 @@ public class ConfirmationMessageListener extends MessageListener {
         }
     }
 
-    public static int addConfirmationMessageListener(MessageReceivedEvent event, Persistable objectToStore) {
+    public static int addConfirmationMessageListener(MessageReceivedEvent event, Persistable objectToStore, Integer attemptsRemaining) {
         Request request = new Request(event.getChannel().getId(), event.getAuthor().getId(), event.getGuild().getId());
         if (ConfirmationMessageListener.PENDING_LISTENERS_REMOVALS.containsKey(request)
                 || ConfirmationMessageListener.GUILD_USER_LOCKS.containsKey(request)) {
@@ -95,7 +97,7 @@ public class ConfirmationMessageListener extends MessageListener {
         }
 
         ConfirmationMessageListener confirmationMessageListener =
-                new ConfirmationMessageListener(event.getChannel().getId(), event.getAuthor().getId(), event.getGuild().getId(), objectToStore);
+                new ConfirmationMessageListener(event.getChannel().getId(), event.getAuthor().getId(), event.getGuild().getId(), objectToStore, attemptsRemaining);
 
         Main.JDA_API.addEventListener(confirmationMessageListener);
         ScheduledFuture<?> scheduledFuture = ConfirmationMessageListener.EXECUTOR_SERVICE.schedule(
@@ -127,10 +129,22 @@ public class ConfirmationMessageListener extends MessageListener {
         ConfirmationMessageListener.LOGGER.info("Received message \"{}\"", event.getMessage().getContentRaw());
 
         ChatConfirmation chatConfirmation = new ChatConfirmation(event.getMessage());
-        switch (chatConfirmation.getStatus()) {
-            case ChatConfirmation.Status.YES -> this.handleConfirm(processingContext);
-            case ChatConfirmation.Status.NO -> this.handleDecline(processingContext);
-            case ChatConfirmation.Status.INVALID -> this.handleInvalidOption(processingContext);
+        if (this.attemptsRemaining != null) {
+            --this.attemptsRemaining;
+        }
+
+        if (this.attemptsRemaining != null && this.attemptsRemaining <= 0 && chatConfirmation.getStatus() == ChatConfirmation.Status.INVALID) {
+            processingContext.addMessages(
+                    "Too many invalid confirmation values provided, the action has been canceled",
+                    ProcessingContext.MessageType.ERROR
+            );
+            this.handleDecline(processingContext);
+        } else {
+            switch (chatConfirmation.getStatus()) {
+                case ChatConfirmation.Status.YES -> this.handleConfirm(processingContext);
+                case ChatConfirmation.Status.NO -> this.handleDecline(processingContext);
+                case ChatConfirmation.Status.INVALID -> this.handleInvalidOption(processingContext);
+            }
         }
 
         return false;
@@ -155,14 +169,23 @@ public class ConfirmationMessageListener extends MessageListener {
     }
 
     private void handleInvalidOption(ProcessingContext processingContext) {
-        processingContext.addMessages(
-                MessageFormat.format(
-                        "Unknown confirmation value provided, please use \"{0}\"/\"{1}\"",
-                        ChatConfirmation.Status.YES.toString(),
-                        ChatConfirmation.Status.NO.toString()
-                ),
-                ProcessingContext.MessageType.ERROR
-        );
+        String message;
+        if (this.attemptsRemaining == null) {
+            message = MessageFormat.format(
+                    "Invalid confirmation value provided, please use \"{0}\"/\"{1}\"",
+                    ChatConfirmation.Status.YES.toString(),
+                    ChatConfirmation.Status.NO.toString()
+            );
+        } else {
+            message = MessageFormat.format(
+                    "Invalid confirmation value provided, please use \"{0}\"/\"{1}\", remaining attempts: {2}",
+                    ChatConfirmation.Status.YES.toString(),
+                    ChatConfirmation.Status.NO.toString(),
+                    this.attemptsRemaining
+            );
+        }
+
+        processingContext.addMessages(message, ProcessingContext.MessageType.ERROR);
     }
 
     public String getChannelId() {

@@ -10,4 +10,6 @@ public class Constants {
 
     public static final int TAG_MAX_LENGTH = 100;
     public static final double LEVENSHTEIN_DISTANCE_WARNING_THRESHOLD = 0.3;
+
+    public static final int CONFIRMATION_ATTEMPTS = 5;
 }
