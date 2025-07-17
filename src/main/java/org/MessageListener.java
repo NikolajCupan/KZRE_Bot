@@ -4,9 +4,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import org.action.ConfirmationMessageListener;
 import org.database.GuildManager;
-import org.database.Persistable;
 import org.database.UserManager;
 import org.javatuples.Pair;
 import org.jetbrains.annotations.NotNull;
@@ -16,78 +14,21 @@ import org.utility.ProcessingContext;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class MessageListener extends ListenerAdapter {
     private static final UserManager USER_MANAGER;// TODO: remove this class
     private static final GuildManager GUILD_MANAGER;// TODO: remove this class
-    private static final Map<Request, ScheduledFuture<?>> PENDING_LISTENERS_REMOVALS;
-
-    private static final ScheduledExecutorService EXECUTOR_SERVICE;
 
     static {
         USER_MANAGER = new UserManager();
         GUILD_MANAGER = new GuildManager();
-        PENDING_LISTENERS_REMOVALS = Collections.synchronizedMap(new TreeMap<>(new Request.ConfirmationKeyComparator()));
-
-        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(3);
-        executor.setRemoveOnCancelPolicy(true);
-        EXECUTOR_SERVICE = Executors.unconfigurableScheduledExecutorService(executor);
-        Runtime.getRuntime().addShutdownHook(new Thread(MessageListener.EXECUTOR_SERVICE::shutdownNow));
     }
 
-    public static void removeConfirmationMessageListener(ConfirmationMessageListener messageListener) {
-        Request request = new Request(messageListener.getChannelId(), messageListener.getUserId());
-
-        // noinspection SynchronizationOnLocalVariableOrMethodParameter
-        synchronized (messageListener) {
-            if (!MessageListener.PENDING_LISTENERS_REMOVALS.containsKey(request)) {
-                // listener was already removed
-                return;
-            }
-
-            ScheduledFuture<?> scheduledFuture = MessageListener.PENDING_LISTENERS_REMOVALS.remove(request);
-            scheduledFuture.cancel(true);
-            Main.JDA_API.removeEventListener(messageListener);
+    protected static void returnResponse(MessageChannel channel, EmbedBuilder embedBuilder) {
+        if (!embedBuilder.isEmpty()) {
+            channel.sendMessageEmbeds(embedBuilder.build()).queue();
         }
-    }
-
-    private static void removeConfirmationMessageListenerAfterTimeout(ConfirmationMessageListener messageListener) {
-        // noinspection SynchronizationOnLocalVariableOrMethodParameter
-        synchronized (messageListener) {
-            if (Thread.interrupted()) {
-                // listener was already removed
-                return;
-            }
-
-            MessageListener.removeConfirmationMessageListener(messageListener);
-            MessageListener.returnResponse(
-                    Main.JDA_API.getChannelById(MessageChannel.class, messageListener.getChannelId()),
-                    new EmbedBuilder().setColor(Color.BLACK)
-                            .addField(ProcessingContext.MessageType.ERROR.toString(), "Confirmation timed out", false)
-            );
-        }
-    }
-
-    public static void addConfirmationMessageListener(MessageReceivedEvent event, Persistable objectToStore) {
-        Request request = new Request(event.getChannel().getId(), event.getAuthor().getId());
-        if (MessageListener.PENDING_LISTENERS_REMOVALS.containsKey(request)) {
-            throw new RuntimeException("The key is already present in the set");
-        }
-
-        ConfirmationMessageListener confirmationMessageListener =
-                new ConfirmationMessageListener(event.getChannel().getId(), event.getAuthor().getId(), objectToStore);
-
-        Main.JDA_API.addEventListener(confirmationMessageListener);
-        ScheduledFuture<?> scheduledFuture = MessageListener.EXECUTOR_SERVICE.schedule(
-                () -> MessageListener.removeConfirmationMessageListenerAfterTimeout(confirmationMessageListener), 5000, TimeUnit.MILLISECONDS
-        );
-        MessageListener.PENDING_LISTENERS_REMOVALS.put(request, scheduledFuture);
-    }
-
-    public static boolean confirmationKeyExists(String channelId, String userId) {
-        return MessageListener.PENDING_LISTENERS_REMOVALS.containsKey(new Request(channelId, userId));
     }
 
     private static void beforeMessageProcessed(MessageReceivedEvent event) {
@@ -116,12 +57,6 @@ public abstract class MessageListener extends ListenerAdapter {
             processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_WARNING, ProcessingContext.MessageType.WARNING)).forEach(element ->
                     embedBuilder.addField(element.messageType().toString(), element.message(), false)
             );
-        }
-    }
-
-    private static void returnResponse(MessageChannel channel, EmbedBuilder embedBuilder) {
-        if (!embedBuilder.isEmpty()) {
-            channel.sendMessageEmbeds(embedBuilder.build()).queue();
         }
     }
 
@@ -162,7 +97,7 @@ public abstract class MessageListener extends ListenerAdapter {
         MessageListener.returnResponse(event.getChannel(), embedBuilder);
     }
 
-    private static class Request {
+    public static class Request {
         private static final Map<Pair<String, String>, Request.Lock> LOCKS;
 
         static {
@@ -230,10 +165,6 @@ public abstract class MessageListener extends ListenerAdapter {
             public Lock() {
                 this.referenceCount = new AtomicInteger(0);
                 this.lock = new Object();
-            }
-
-            public synchronized int getReferenceCount() {
-                return this.referenceCount.get();
             }
 
             public synchronized Object getLock() {

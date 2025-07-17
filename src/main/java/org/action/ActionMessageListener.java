@@ -89,7 +89,7 @@ public class ActionMessageListener extends MessageListener {
 
     @Override
     public boolean processMessage(MessageReceivedEvent event, ProcessingContext processingContext) {
-        if (MessageListener.confirmationKeyExists(event.getChannel().getId(), event.getAuthor().getId())) {
+        if (ConfirmationMessageListener.confirmationKeyExists(event.getChannel().getId(), event.getAuthor().getId())) {
             // Waiting for confirmation
             ActionMessageListener.LOGGER.info("Message ignored because it is a pending confirmation");
             return false;

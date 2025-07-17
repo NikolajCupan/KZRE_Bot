@@ -137,7 +137,7 @@ public class Quote extends ActionHandler {
                     .toList();
 
             if (!similarTags.isEmpty()) {
-                MessageListener.addConfirmationMessageListener(event, newTag);
+                int timeToConfirmSeconds = ConfirmationMessageListener.addConfirmationMessageListener(event, newTag);
 
                 StringBuilder stringBuilder = new StringBuilder();
                 sortedSimilarTags.stream().limit(displayedSimilarTags).forEach(pair ->
@@ -147,7 +147,8 @@ public class Quote extends ActionHandler {
 
                 if (similarTags.size() == 1) {
                     processingContext.addMessages(
-                            MessageFormat.format("Similar tag detected, confirm action by replying \"{0}\" or \"{1}\":\n{2}",
+                            MessageFormat.format("Similar tag detected, confirm action in {0} seconds by replying \"{1}\" or \"{2}\":\n{3}",
+                                    timeToConfirmSeconds,
                                     ChatConfirmation.Status.YES.toString(),
                                     ChatConfirmation.Status.NO.toString(),
                                     stringBuilder.toString()
@@ -156,8 +157,9 @@ public class Quote extends ActionHandler {
                     );
                 } else if (similarTags.size() <= 5) {
                     processingContext.addMessages(
-                            MessageFormat.format("Multiple similar tags found ({0}), confirm action by replying \"{1}\" or \"{2}\":\n{3}",
+                            MessageFormat.format("Multiple similar tags found ({0}), confirm action in {1} seconds by replying \"{2}\" or \"{3}\":\n{4}",
                                     similarTags.size(),
+                                    timeToConfirmSeconds,
                                     ChatConfirmation.Status.YES.toString(),
                                     ChatConfirmation.Status.NO.toString(),
                                     stringBuilder.toString()
@@ -166,8 +168,9 @@ public class Quote extends ActionHandler {
                     );
                 } else {
                     processingContext.addMessages(
-                            MessageFormat.format("Multiple similar tags found ({0}), confirm action by replying \"{1}\" or \"{2}\", showing first {3}:\n{4}",
+                            MessageFormat.format("Multiple similar tags found ({0}), confirm action in {1} seconds by replying \"{2}\" or \"{3}\", showing first {4}:\n{5}",
                                     similarTags.size(),
+                                    timeToConfirmSeconds,
                                     ChatConfirmation.Status.YES.toString(),
                                     ChatConfirmation.Status.NO.toString(),
                                     displayedSimilarTags,
