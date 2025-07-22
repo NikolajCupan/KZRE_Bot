@@ -9,7 +9,10 @@ public class Constants {
     public static final String DEVELOPMENT_SERVER_ID = "949756585616474152";
 
     public static final int TAG_MAX_LENGTH = 100;
-    public static final double LEVENSHTEIN_DISTANCE_WARNING_THRESHOLD = 0.3;
+    public static final int QUOTE_MAX_LENGTH = 2_000;
+
+    public static final double LEVENSHTEIN_DISTANCE_WARNING_THRESHOLD = 0.2;
+    public static final double SIMHASH_DISTANCE_WARNING_THRESHOLD = 0.2;
 
     public static final int CONFIRMATION_ATTEMPTS = 5;
 }

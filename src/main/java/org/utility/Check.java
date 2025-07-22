@@ -1,10 +1,15 @@
 package org.utility;
 
 import org.exception.InvalidActionArgumentException;
-
 import java.text.MessageFormat;
 
 public class Check {
+    public static boolean isNotBlank(String value, boolean throwIfFalse, String valueName) {
+        return Check.throwIfFalse(
+                Check.isNotBlank(value), throwIfFalse, "cannot be blank", valueName
+        );
+    }
+
     public static<T extends Enum<?>, U extends Enum<?>> boolean enumeratorIsFromEnum(
             Class<T> enumClass, U testedEnumerator, boolean throwIfFalse
     ) {
@@ -46,7 +51,7 @@ public class Check {
     ) {
         return Check.throwIfFalse(
                 Check.isLongInRange(testedValue, minInclusive, maxInclusive),
-                throwIfFalse, MessageFormat.format("Long value is not in range <{0}; {1}>", minInclusive, maxInclusive), valueName
+                throwIfFalse, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), valueName
         );
     }
 
@@ -55,8 +60,12 @@ public class Check {
     ) {
         return Check.throwIfFalse(
                 Check.isDoubleInRange(testedValue, minInclusive, maxInclusive),
-                throwIfFalse, MessageFormat.format("Double value is not in range <{0}; {1}>", minInclusive, maxInclusive), valueName
+                throwIfFalse, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), valueName
         );
+    }
+
+    private static boolean isNotBlank(String value) {
+        return !value.isBlank();
     }
 
     private static<T extends Enum<?>, U extends Enum<?>> boolean enumeratorIsFromEnum(Class<T> enumClass, U testedEnumerator) {

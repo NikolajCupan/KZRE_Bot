@@ -13,5 +13,6 @@
         <mapping class="org.database.dto.GuildDto"/>
         <mapping class="org.database.dto.TagDto"/>
         <mapping class="org.database.dto.UserDto"/>
+        <mapping class="org.database.dto.QuoteDto"/>
     </session-factory>
 </hibernate-configuration>

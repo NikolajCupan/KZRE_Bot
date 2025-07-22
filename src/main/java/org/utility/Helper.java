@@ -1,19 +1,40 @@
 package org.utility;
 
 import java.math.RoundingMode;
+import java.text.Normalizer;
 import java.text.NumberFormat;
+import java.util.List;
 
 public class Helper {
-    private static final NumberFormat NUMBER_FORMAT;
+    public static double formatDecimalNumber(double value, int decimalPlaces) {
+        NumberFormat numberFormat = NumberFormat.getInstance();
+        numberFormat.setRoundingMode(RoundingMode.HALF_UP);
+        numberFormat.setMaximumFractionDigits(decimalPlaces);
 
-    static {
-        NUMBER_FORMAT = NumberFormat.getInstance();
-        Helper.NUMBER_FORMAT.setRoundingMode(RoundingMode.HALF_UP);
+        return Double.parseDouble(numberFormat.format(value));
     }
 
-    public static double formatDecimalNumber(double value, int decimalPlaces) {
-        Helper.NUMBER_FORMAT.setMaximumFractionDigits(decimalPlaces);
-        return Double.parseDouble(Helper.NUMBER_FORMAT.format(value));
+    public static String snakeCaseToCamelCase(String value) {
+        String result = value;
+        while(result.contains("_")) {
+            result = result.replaceFirst(
+                    "_[a-z]",
+                    String.valueOf(Character.toUpperCase(result.charAt(result.indexOf("_") + 1)))
+            );
+        }
+
+        return result;
+    }
+
+    public static List<String> normalizeAndTokenizeString(String value) {
+        String resultString = value.toLowerCase();
+        resultString = Normalizer.normalize(resultString, Normalizer.Form.NFD)
+                .replaceAll("[^\\p{ASCII}]", "");
+
+        return List.of(resultString.split(" ")).stream()
+                .map(element -> element.replaceAll("[^A-Za-z0-9]", ""))
+                .filter(element -> !element.isBlank())
+                .toList();
     }
 
     public enum EmptyEnum {}
