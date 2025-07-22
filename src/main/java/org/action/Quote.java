@@ -113,16 +113,16 @@ public class Quote extends ActionHandler {
     private void handleNewQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         String chatNewQuote = chatCommand.getFirstArgument(ActionModifier.VALUE, false, true, processingContext)
                 .getTrimmedUsedValue(processingContext);
-        Check.isNotBlank(chatNewQuote, true, "New quote ");
-        Check.isInRange(chatNewQuote.length(), 1, Constants.QUOTE_MAX_LENGTH, true, "Quote length ");
+        Check.isNotBlank(chatNewQuote, true, "New quote", null);
+        Check.isInRange(chatNewQuote.length(), 1, Constants.QUOTE_MAX_LENGTH, true, "Quote length", null);
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
 
         try {
-            if (QuoteDto.quoteExists(chatNewQuote, event.getGuild().getId(), session)) {
-                throw new InvalidActionArgumentException(MessageFormat.format("Quote \"{0}\" already exists", chatNewQuote));
-            }
+            Check.isBooleanFalse(
+                    QuoteDto.quoteExists(chatNewQuote, event.getGuild().getId(), session), true, "Quote " + chatNewQuote, "already exists"
+            );
         } finally {
             transaction.commit();
             session.close();
@@ -132,16 +132,16 @@ public class Quote extends ActionHandler {
     private void handleNewTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         String chatNewTag = chatCommand.getFirstArgument(ActionModifier.VALUE, false, true, processingContext)
                 .getTrimmedNormalizedLowercaseUsedValue(processingContext);
-        Check.isNotBlank(chatNewTag, true, "New tag ");
-        Check.isInRange(chatNewTag.length(), 1, Constants.TAG_MAX_LENGTH, true, "Tag length ");
+        Check.isNotBlank(chatNewTag, true, "New tag", null);
+        Check.isInRange(chatNewTag.length(), 1, Constants.TAG_MAX_LENGTH, true, "Tag length", null);
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
 
         try {
-            if (TagDto.tagExists(chatNewTag, event.getGuild().getId(),session)) {
-                throw new InvalidActionArgumentException(MessageFormat.format("Tag \"{0}\" already exists", chatNewTag));
-            }
+            Check.isBooleanFalse(
+                    TagDto.tagExists(chatNewTag, event.getGuild().getId(),session), true, "Tag " + chatNewTag, "already exists"
+            );
 
             TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewTag);
             List<Pair<Double, TagDto>> similarTags = TagDto.findSimilarTags(chatNewTag, event.getGuild().getId(), session);

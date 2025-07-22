@@ -4,73 +4,84 @@ import org.exception.InvalidActionArgumentException;
 import java.text.MessageFormat;
 
 public class Check {
-    public static boolean isNotBlank(String value, boolean throwIfFalse, String valueName) {
+    public static boolean isBooleanFalse(boolean testedValue, boolean throwIfFalse, String customValueName, String customMessage) {
         return Check.throwIfFalse(
-                Check.isNotBlank(value), throwIfFalse, "cannot be blank", valueName
+                Check.isBooleanFalse(testedValue), throwIfFalse, customValueName, "cannot be true", customMessage
+        );
+    }
+
+    public static boolean isNotBlank(String testedValue, boolean throwIfFalse, String customValueName, String customMessage) {
+        return Check.throwIfFalse(
+                Check.isNotBlank(testedValue), throwIfFalse, customValueName, "cannot be blank", customMessage
         );
     }
 
     public static<T extends Enum<?>, U extends Enum<?>> boolean enumeratorIsFromEnum(
-            Class<T> enumClass, U testedEnumerator, boolean throwIfFalse
+            U testedValue, Class<T> enumClass, boolean throwIfFalse, String customValueName, String customMessage
     ) {
         return Check.throwIfFalse(
-                Check.enumeratorIsFromEnum(enumClass, testedEnumerator), throwIfFalse, "Enumerator is not from enum", null
+                Check.enumeratorIsFromEnum(testedValue, enumClass), throwIfFalse,
+                customValueName, "Enumerator is not from enum", customMessage
         );
     }
 
-    public static<T> boolean isWholeNumber(T testedValue, boolean throwIfFalse, String valueName) {
+    public static<T> boolean isWholeNumber(T testedValue, boolean throwIfFalse, String customValueName, String customMessage) {
         return Check.throwIfFalse(
-                Check.isWholeNumber(testedValue), throwIfFalse, "is not a whole number", valueName
+                Check.isWholeNumber(testedValue), throwIfFalse, customValueName, "is not a whole number", customMessage
         );
     }
 
-    public static<T> boolean isDecimalNumber(T testedValue, boolean throwIfFalse, String valueName) {
+    public static<T> boolean isDecimalNumber(T testedValue, boolean throwIfFalse, String customValueName, String customMessage) {
         return Check.throwIfFalse(
-                Check.isDecimalNumber(testedValue), throwIfFalse, "is not a decimal number", valueName
+                Check.isDecimalNumber(testedValue), throwIfFalse, customValueName, "is not a decimal number", customMessage
         );
     }
 
     public static<T extends Number, U extends Number> boolean isInRange(
-            T testedValue, U minInclusive, U maxInclusive, boolean throwIfFalse, String valueName
+            T testedValue, U minInclusive, U maxInclusive, boolean throwIfFalse, String customValueName, String customMessage
     ) {
         if (testedValue instanceof Byte || testedValue instanceof Short || testedValue instanceof Integer || testedValue instanceof Long) {
             return Check.throwIfFalse(
-                    Check.isLongInRange(testedValue, minInclusive.longValue(), maxInclusive.longValue()),
-                    throwIfFalse, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), valueName
+                    Check.isLongInRange(testedValue, minInclusive.longValue(), maxInclusive.longValue()), throwIfFalse,
+                    customValueName, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), customMessage
             );
         } else {
             return Check.throwIfFalse(
-                    Check.isDoubleInRange(testedValue, minInclusive.doubleValue(), maxInclusive.doubleValue()),
-                    throwIfFalse, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), valueName
+                    Check.isDoubleInRange(testedValue, minInclusive.doubleValue(), maxInclusive.doubleValue()), throwIfFalse,
+                    customValueName, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), customMessage
             );
         }
     }
 
     public static<T> boolean isLongInRange(
-            Object testedValue, T minInclusive, T maxInclusive, boolean throwIfFalse, String valueName
+            Object testedValue, T minInclusive, T maxInclusive, boolean throwIfFalse, String customValueName, String customMessage
     ) {
         return Check.throwIfFalse(
-                Check.isLongInRange(testedValue, minInclusive, maxInclusive),
-                throwIfFalse, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), valueName
+                Check.isLongInRange(testedValue, minInclusive, maxInclusive), throwIfFalse,
+                customValueName, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), customMessage
         );
     }
 
     public static<T> boolean isDoubleInRange(
-            Object testedValue, T minInclusive, T maxInclusive, boolean throwIfFalse, String valueName
+            Object testedValue, T minInclusive, T maxInclusive, boolean throwIfFalse, String customValueName, String customMessage
     ) {
         return Check.throwIfFalse(
-                Check.isDoubleInRange(testedValue, minInclusive, maxInclusive),
-                throwIfFalse, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), valueName
+                Check.isDoubleInRange(testedValue, minInclusive, maxInclusive), throwIfFalse,
+                customValueName, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), customMessage
         );
     }
 
-    private static boolean isNotBlank(String value) {
-        return !value.isBlank();
+    private static boolean isBooleanFalse(boolean testedValue) {
+        return !testedValue;
     }
 
-    private static<T extends Enum<?>, U extends Enum<?>> boolean enumeratorIsFromEnum(Class<T> enumClass, U testedEnumerator) {
+    private static boolean isNotBlank(String testedValue) {
+        return !testedValue.isBlank();
+    }
+
+    private static<T extends Enum<?>, U extends Enum<?>> boolean enumeratorIsFromEnum(U testedValue, Class<T> enumClass) {
         for (Enum<?> enumerator : enumClass.getEnumConstants()) {
-            if (enumerator.name().equals(testedEnumerator.name())) {
+            if (enumerator.name().equals(testedValue.name())) {
                 return true;
             }
         }
@@ -128,12 +139,14 @@ public class Check {
         return testedValueCasted >= minValueCasted && testedValueCasted <= maxValueCasted;
     }
 
-    private static boolean throwIfFalse(boolean result, boolean throwIfFalse, String message, String valueName) {
-        if (!result && throwIfFalse) {
-            String finalMessage = MessageFormat.format("{0} {1}", (valueName != null && !valueName.isBlank()) ? valueName : "Value", message);
-            throw new InvalidActionArgumentException(finalMessage);
+    private static boolean throwIfFalse(boolean testResult, boolean throwIfFalse, String customValueName, String defaultMessage, String customMessage) {
+        if (!testResult && throwIfFalse) {
+            String finalValueName = (customValueName != null && !customValueName.isBlank()) ? customValueName : "Value";
+            String finalMessage = (customMessage != null && !customMessage.isBlank()) ? customMessage : defaultMessage;
+
+            throw new InvalidActionArgumentException(finalValueName + " " + finalValueName);
         }
 
-        return result;
+        return testResult;
     }
 }

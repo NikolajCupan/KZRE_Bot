@@ -47,23 +47,23 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
                 this.defaultArgumentType = TypedValue.Type.NULL;
             }
         } else if (defaultArgument instanceof Enum<?>) {
-            if (!Check.enumeratorIsFromEnum(possibleArgumentsEnumClass, (Enum<?>)defaultArgument, false)) {
+            if (!Check.enumeratorIsFromEnum((Enum<?>)defaultArgument, possibleArgumentsEnumClass, false, null, null)) {
                 throw new IllegalArgumentException("If default argument is an enumerator, it must be from the possible arguments enum");
             }
 
             this.defaultArgumentType = TypedValue.Type.ENUMERATOR;
-        } else if (Check.isWholeNumber(defaultArgument, false, null)) {
+        } else if (Check.isWholeNumber(defaultArgument, false, null, null)) {
             if (!(minInclusive instanceof Long) || !(defaultArgument instanceof Long)) {
                 throw new IllegalArgumentException("If default argument is a whole number, both it and the range values must be of type Long");
-            } else if (!Check.isLongInRange(defaultArgument, minInclusive, maxInclusive, false, null)) {
+            } else if (!Check.isLongInRange(defaultArgument, minInclusive, maxInclusive, false, null, null)) {
                 throw new IllegalArgumentException("Default argument is not in specified range");
             }
 
             this.defaultArgumentType = TypedValue.Type.WHOLE_NUMBER;
-        } else if (Check.isDecimalNumber(defaultArgument, false, null)) {
+        } else if (Check.isDecimalNumber(defaultArgument, false, null, null)) {
             if (!(minInclusive instanceof Double) || !(defaultArgument instanceof Double)) {
                 throw new IllegalArgumentException("If default argument is a decimal number, both it and the range values must be of type Double");
-            } else if (!Check.isDoubleInRange(defaultArgument, minInclusive, maxInclusive, false, null)) {
+            } else if (!Check.isDoubleInRange(defaultArgument, minInclusive, maxInclusive, false, null, null)) {
                 throw new IllegalArgumentException("Default argument is not in specified range");
             }
 
@@ -101,11 +101,11 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
 
         if (this.argumentCanBeAnyString) {
             return true;
-        } else if (this.argumentCanBeDecimalNumber && Check.isDecimalNumber(chatArgument, false, null)
-                && Check.isDoubleInRange(chatArgument, this.minInclusive, this.maxInclusive, false, null)) {
+        } else if (this.argumentCanBeDecimalNumber && Check.isDecimalNumber(chatArgument, false, null, null)
+                && Check.isDoubleInRange(chatArgument, this.minInclusive, this.maxInclusive, false, null, null)) {
             return true;
-        } else if (this.argumentCanBeWholeNumber && Check.isWholeNumber(chatArgument, false, null)
-                && Check.isLongInRange(chatArgument, this.minInclusive, this.maxInclusive, false, null)) {
+        } else if (this.argumentCanBeWholeNumber && Check.isWholeNumber(chatArgument, false, null, null)
+                && Check.isLongInRange(chatArgument, this.minInclusive, this.maxInclusive, false, null, null)) {
             return true;
         }
 
@@ -117,11 +117,11 @@ public class Modifier<T extends Enum<T>, U extends Number & Comparable<U>> {
 
         if (this.possibleArguments.contains(chatArgument)) {
             return TypedValue.Type.ENUMERATOR;
-        } else if (this.argumentCanBeWholeNumber && Check.isWholeNumber(chatArgument, false, null)
-                && Check.isLongInRange(chatArgument, this.minInclusive, this.maxInclusive, false, null)) {
+        } else if (this.argumentCanBeWholeNumber && Check.isWholeNumber(chatArgument, false, null, null)
+                && Check.isLongInRange(chatArgument, this.minInclusive, this.maxInclusive, false, null, null)) {
             return TypedValue.Type.WHOLE_NUMBER;
-        } else if (this.argumentCanBeDecimalNumber && Check.isDecimalNumber(chatArgument, false, null)
-                && Check.isDoubleInRange(chatArgument, this.minInclusive, this.maxInclusive, false, null)) {
+        } else if (this.argumentCanBeDecimalNumber && Check.isDecimalNumber(chatArgument, false, null, null)
+                && Check.isDoubleInRange(chatArgument, this.minInclusive, this.maxInclusive, false, null, null)) {
             return TypedValue.Type.DECIMAL_NUMBER;
         } else {
             return TypedValue.Type.STRING;

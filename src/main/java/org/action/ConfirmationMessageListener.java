@@ -92,10 +92,8 @@ public class ConfirmationMessageListener extends MessageListener {
 
     public static int addConfirmationMessageListener(MessageReceivedEvent event, Persistable objectToStore, Integer attemptsRemaining) {
         Request request = new Request(event.getChannel().getId(), event.getAuthor().getId(), event.getGuild().getId());
-        if (ConfirmationMessageListener.PENDING_LISTENERS_REMOVALS.containsKey(request)
-                || ConfirmationMessageListener.GUILD_USER_LOCKS.containsKey(request)) {
-            throw new RuntimeException("The key is already present");
-        }
+        assert !ConfirmationMessageListener.PENDING_LISTENERS_REMOVALS.containsKey(request);
+        assert !ConfirmationMessageListener.GUILD_USER_LOCKS.containsKey(request);
 
         ConfirmationMessageListener confirmationMessageListener =
                 new ConfirmationMessageListener(event.getChannel().getId(), event.getAuthor().getId(), event.getGuild().getId(), objectToStore, attemptsRemaining);
