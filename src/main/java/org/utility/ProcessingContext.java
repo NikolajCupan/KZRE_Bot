@@ -20,18 +20,12 @@ public class ProcessingContext {
                 .toList();
     }
 
-    public boolean hasErrorMessage() {
+    public boolean hasMessageOfType(ProcessingContext.MessageType type) {
         return this.messages.stream().anyMatch(element ->
-            element.messageType == MessageType.ERROR
+                element.messageType == type
         );
     }
 
-    public boolean hasParsingErrorMessage() {
-        return this.messages.stream().anyMatch(element ->
-                element.messageType == MessageType.PARSING_ERROR
-        );
-    }
-
-    public enum MessageType { INFO_RESULT, SUCCESS_RESULT, WARNING, PARSING_WARNING, ERROR, PARSING_ERROR }
+    public enum MessageType { INFO_RESULT, SUCCESS_RESULT, WARNING, PARSING_WARNING, FORCE_SWITCH_WARNING, ERROR, PARSING_ERROR }
     public record Message(String message, MessageType messageType) {}
 }

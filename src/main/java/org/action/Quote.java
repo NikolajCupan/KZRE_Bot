@@ -5,7 +5,6 @@ import org.*;
 import org.database.dto.QuoteDto;
 import org.database.dto.TagDto;
 import org.exception.CustomException;
-import org.exception.InvalidActionArgumentException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.javatuples.Pair;
@@ -146,58 +145,14 @@ public class Quote extends ActionHandler {
             TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewTag);
             List<Pair<Double, TagDto>> similarTags = TagDto.findSimilarTags(chatNewTag, event.getGuild().getId(), session);
 
-            int displayedSimilarTags = 5;
-            List<Pair<Double, TagDto>> sortedSimilarTags = similarTags.stream()
-                    .sorted(Comparator.comparing(Pair::getValue0))
-                    .limit(displayedSimilarTags)
-                    .toList();
-
             boolean forceSwitchPresent = chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.FORCE);
             if (!similarTags.isEmpty() && !forceSwitchPresent) {
                 int timeToConfirmSeconds = ConfirmationMessageListener.addConfirmationMessageListener(
                         event, newTag, Constants.CONFIRMATION_ATTEMPTS
                 );
 
-                StringBuilder stringBuilder = new StringBuilder();
-                sortedSimilarTags.stream().limit(displayedSimilarTags).forEach(pair ->
-                        stringBuilder.append("Similarity: ").append(Helper.formatDecimalNumber(100 - pair.getValue0() * 100, 2))
-                                .append(" %, tag: ").append(pair.getValue1().getTag()).append("\n")
-                );
-
-                if (similarTags.size() == 1) {
-                    processingContext.addMessages(
-                            MessageFormat.format("Similar tag detected, confirm action in {0} seconds by replying \"{1}\" or \"{2}\":\n{3}",
-                                    timeToConfirmSeconds,
-                                    ChatConfirmation.Status.YES.toString(),
-                                    ChatConfirmation.Status.NO.toString(),
-                                    stringBuilder.toString()
-                            ),
-                            ProcessingContext.MessageType.INFO_RESULT
-                    );
-                } else if (similarTags.size() <= displayedSimilarTags) {
-                    processingContext.addMessages(
-                            MessageFormat.format("Multiple similar tags found ({0}), confirm action in {1} seconds by replying \"{2}\" or \"{3}\":\n{4}",
-                                    similarTags.size(),
-                                    timeToConfirmSeconds,
-                                    ChatConfirmation.Status.YES.toString(),
-                                    ChatConfirmation.Status.NO.toString(),
-                                    stringBuilder.toString()
-                            ),
-                            ProcessingContext.MessageType.INFO_RESULT
-                    );
-                } else {
-                    processingContext.addMessages(
-                            MessageFormat.format("Multiple similar tags found ({0}), confirm action in {1} seconds by replying \"{2}\" or \"{3}\", showing first {4} results:\n{5}",
-                                    similarTags.size(),
-                                    timeToConfirmSeconds,
-                                    ChatConfirmation.Status.YES.toString(),
-                                    ChatConfirmation.Status.NO.toString(),
-                                    displayedSimilarTags,
-                                    stringBuilder.toString()
-                            ),
-                            ProcessingContext.MessageType.INFO_RESULT
-                    );
-                }
+                String message = Quote.getSimilarTagsWarning(similarTags, timeToConfirmSeconds);
+                processingContext.addMessages(message, ProcessingContext.MessageType.INFO_RESULT);
             } else {
                 newTag.persist(processingContext, session);
 
@@ -207,13 +162,53 @@ public class Quote extends ActionHandler {
                                     "Similar tag(s) were detected, action would normally require confirmation, however, since \"{0}\" switch modifier was used, the action was executed immediately",
                                     ActionHandler.GlobalActionModifier.FORCE.toString()
                             ),
-                            ProcessingContext.MessageType.WARNING
+                            ProcessingContext.MessageType.FORCE_SWITCH_WARNING
                     );
                 }
             }
         } finally {
             transaction.commit();
             session.close();
+        }
+    }
+
+    private static String getSimilarTagsWarning(List<Pair<Double, TagDto>> similarTags, int timeToConfirmSeconds) {
+        int maxDisplayedSimilarTags = 5;
+        List<Pair<Double, TagDto>> sortedSimilarTags = similarTags.stream()
+                .sorted(Comparator.comparing(Pair::getValue0))
+                .limit(maxDisplayedSimilarTags)
+                .toList();
+
+        StringBuilder stringBuilder = new StringBuilder();
+        sortedSimilarTags.stream().limit(maxDisplayedSimilarTags).forEach(pair ->
+                stringBuilder.append("Similarity: ").append(Helper.formatDecimalNumber(100 - pair.getValue0() * 100, 2))
+                        .append(" %, tag: ").append(pair.getValue1().getTag()).append("\n")
+        );
+
+        if (similarTags.size() == 1) {
+            return MessageFormat.format("Similar tag detected, confirm action in {0} seconds by replying \"{1}\" or \"{2}\":\n{3}",
+                    timeToConfirmSeconds,
+                    ChatConfirmation.Status.YES.toString(),
+                    ChatConfirmation.Status.NO.toString(),
+                    stringBuilder.toString()
+            );
+        } else if (similarTags.size() <= maxDisplayedSimilarTags) {
+            return MessageFormat.format("Multiple similar tags found ({0}), confirm action in {1} seconds by replying \"{2}\" or \"{3}\":\n{4}",
+                    similarTags.size(),
+                    timeToConfirmSeconds,
+                    ChatConfirmation.Status.YES.toString(),
+                    ChatConfirmation.Status.NO.toString(),
+                    stringBuilder.toString()
+            );
+        } else {
+            return MessageFormat.format("Multiple similar tags found ({0}), confirm action in {1} seconds by replying \"{2}\" or \"{3}\", showing first {4} results:\n{5}",
+                similarTags.size(),
+                timeToConfirmSeconds,
+                ChatConfirmation.Status.YES.toString(),
+                ChatConfirmation.Status.NO.toString(),
+                maxDisplayedSimilarTags,
+                stringBuilder.toString()
+            );
         }
     }
 

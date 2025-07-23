@@ -36,7 +36,7 @@ public class ChatCommand {
         ChatCommand.processMentions(message, processingContext);
         IndexedMessage indexedMessage = ChatCommand.parseMessage(message.getContentDisplay(), escapeCharacterIndex, processingContext);
 
-        if (processingContext.hasParsingErrorMessage()) {
+        if (processingContext.hasMessageOfType(ProcessingContext.MessageType.PARSING_ERROR)) {
             return;
         }
 
@@ -175,7 +175,7 @@ public class ChatCommand {
     }
 
     private static int parseEscapeCharacter(String content, ProcessingContext processingContext) {
-        if (processingContext.hasParsingErrorMessage()) {
+        if (processingContext.hasMessageOfType(ProcessingContext.MessageType.PARSING_ERROR)) {
             return -1;
         }
 
@@ -227,7 +227,7 @@ public class ChatCommand {
     }
 
     private static void processMentions(Message message, ProcessingContext processingContext) {
-        if (processingContext.hasParsingErrorMessage()) {
+        if (processingContext.hasMessageOfType(ProcessingContext.MessageType.PARSING_ERROR)) {
             return;
         }
 
@@ -306,7 +306,7 @@ public class ChatCommand {
     }
 
     private static IndexedMessage parseMessage(String content, int escapeCharacterIndex, ProcessingContext processingContext) {
-        if (processingContext.hasParsingErrorMessage()) {
+        if (processingContext.hasMessageOfType(ProcessingContext.MessageType.PARSING_ERROR)) {
             return null;
         }
 

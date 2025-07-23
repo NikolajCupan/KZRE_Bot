@@ -29,17 +29,16 @@ public class ActionMessageListener extends MessageListener {
         Set<Enum<?>> accessedModifiers = chatCommand.getModifierMap().getAccessedModifiers();
         Set<Enum<?>> addedAfterParsingModifiers = chatCommand.getModifierMap().getAddedAfterParsingModifiers();
 
-        for (Enum<?> key : modifiers.keySet()) {
-            List<TypedValue> arguments = modifiers.get(key);
+        for (Enum<?> modifierName : modifiers.keySet()) {
+            List<TypedValue> arguments = modifiers.get(modifierName);
             List<TypedValue> unusedArguments = arguments.stream()
                     .filter(element -> !element.getUsed()
                             && element.getResolution() != TypedValue.Resolution.MODIFIER_MISSING
                             && element.getResolution() != TypedValue.Resolution.ARGUMENT_MISSING)
                     .toList();
 
-            boolean modifierAccessed = accessedModifiers.contains(key)
-                    || key.toString().equalsIgnoreCase(ActionHandler.GlobalActionModifier.VERBOSE.toString());
-            boolean modifierAddedAfterParsing = addedAfterParsingModifiers.contains(key);
+            boolean modifierAccessed = accessedModifiers.contains(modifierName);
+            boolean modifierAddedAfterParsing = addedAfterParsingModifiers.contains(modifierName);
             boolean modifierIsSwitch = arguments.isEmpty() || arguments.getFirst().getType() == TypedValue.Type.SWITCH;
 
             StringBuilder stringBuilder = new StringBuilder();
@@ -54,32 +53,32 @@ public class ActionMessageListener extends MessageListener {
                         processingContext.addMessages(
                                 MessageFormat.format(
                                         "Modifier \"{0}\" and its arguments [{1}] were not used, additionally \"{0}\" is a switch modifier and should not be provided with any arguments",
-                                        key,
+                                        modifierName,
                                         stringBuilder.toString()
                                 ),
                                 ProcessingContext.MessageType.WARNING
                         );
                     } else {
                         processingContext.addMessages(
-                                MessageFormat.format("Modifier \"{0}\" and its arguments [{1}] were not used", key, stringBuilder.toString()),
+                                MessageFormat.format("Modifier \"{0}\" and its arguments [{1}] were not used", modifierName, stringBuilder.toString()),
                                 ProcessingContext.MessageType.WARNING
                         );
                     }
                 } else if (!modifierAddedAfterParsing) {
                     processingContext.addMessages(
-                            MessageFormat.format("Modifier \"{0}\" was not used", key),
+                            MessageFormat.format("{0} \"{1}\" was not used", modifierIsSwitch ? "Switch modifier" : "Modifier", modifierName),
                             ProcessingContext.MessageType.WARNING
                     );
                 }
             } else if (!unusedArguments.isEmpty()) {
                 if (modifierIsSwitch) {
                     processingContext.addMessages(
-                            MessageFormat.format("Modifier \"{0}\" is a switch modifier, it should not be provided with any arguments, arguments were ignored: [{1}]", key, stringBuilder.toString()),
+                            MessageFormat.format("Modifier \"{0}\" is a switch modifier, it should not be provided with any arguments, arguments were ignored: [{1}]", modifierName, stringBuilder.toString()),
                             ProcessingContext.MessageType.WARNING
                     );
                 } else {
                     processingContext.addMessages(
-                            MessageFormat.format("Not all arguments for modifier \"{0}\" were used, the unused arguments are: [{1}]", key, stringBuilder.toString()),
+                            MessageFormat.format("Not all arguments for modifier \"{0}\" were used, the unused arguments are: [{1}]", modifierName, stringBuilder.toString()),
                             ProcessingContext.MessageType.WARNING
                     );
                 }
@@ -87,17 +86,34 @@ public class ActionMessageListener extends MessageListener {
         }
     }
 
+    private static void warnIfForceWasNotNeeded(ChatCommand chatCommand, ProcessingContext processingContext) {
+        boolean forceSwitchAccessed = chatCommand.getModifierMap().getAccessedModifiers().contains(
+                ActionHandler.GlobalActionModifier.FORCE
+        );
+        boolean hasForceSwitchWarning = processingContext.hasMessageOfType(ProcessingContext.MessageType.FORCE_SWITCH_WARNING);
+
+        if (forceSwitchAccessed && !hasForceSwitchWarning) {
+            processingContext.addMessages(
+                    MessageFormat.format(
+                            "All validation checks passed successfully, the \"{0}\" switch modifier was provided but not needed",
+                            ActionHandler.GlobalActionModifier.FORCE.toString()
+                    ),
+                    ProcessingContext.MessageType.WARNING
+            );
+        }
+    }
+
     @Override
     public boolean processMessage(MessageReceivedEvent event, ProcessingContext processingContext) {
         if (ConfirmationMessageListener.confirmationKeyExists(event.getChannel().getId(), event.getAuthor().getId())) {
             // Waiting for confirmation
-            ActionMessageListener.LOGGER.info("Message ignored because it is a pending confirmation");
+            ActionMessageListener.LOGGER.info("Message ignored because there is a pending confirmation");
             return false;
         }
 
         ChatCommand chatCommand = new ChatCommand(event.getMessage(), ActionMessageListener.REGISTERED_ACTION_HANDLERS, processingContext);
         ActionHandler actionHandler = chatCommand.getActionHandler();
-        if (actionHandler == null || processingContext.hasParsingErrorMessage()) {
+        if (actionHandler == null || processingContext.hasMessageOfType(ProcessingContext.MessageType.PARSING_ERROR)) {
             return false;
         }
 
@@ -115,8 +131,11 @@ public class ActionMessageListener extends MessageListener {
         ActionMessageListener.LOGGER.info("Received action \"{}\"", event.getMessage().getContentRaw());
 
         actionHandler.executeAction(event, chatCommand, processingContext);
-        ActionMessageListener.warnIfUnusedModifiersOrArgumentsExist(chatCommand, processingContext);
 
-        return chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.VERBOSE);
+        boolean verboseSwitchPresent = chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.VERBOSE);
+        ActionMessageListener.warnIfUnusedModifiersOrArgumentsExist(chatCommand, processingContext);
+        ActionMessageListener.warnIfForceWasNotNeeded(chatCommand, processingContext);
+
+        return verboseSwitchPresent;
     }
 }
