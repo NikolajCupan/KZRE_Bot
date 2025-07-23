@@ -24,7 +24,7 @@ public class TypedValue {
     public String getStateMessage(String modifierName, boolean includeDefaultValueUsage) {
         String message = "";
         switch (this.resolution) {
-            case MODIFIER_MISSING -> message = MessageFormat.format("Mandatory modifier \"{0}\" was not found", modifierName);
+            case MODIFIER_MISSING -> message = MessageFormat.format("Modifier \"{0}\" was not found", modifierName);
             case ARGUMENT_MISSING -> message = MessageFormat.format("Argument for modifier \"{0}\" was not found", modifierName);
             case ARGUMENT_INVALID -> message = MessageFormat.format("Argument \"{0}\" for modifier \"{1}\" is not valid", this.rawValue, modifierName);
             case ARGUMENT_VALID -> throw new IllegalStateException(MessageFormat.format("Cannot generate state message when resolution is set to\"{0}\"", this.resolution));

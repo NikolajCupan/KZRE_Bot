@@ -8,7 +8,6 @@ import org.utility.ProcessingContext;
 import org.utility.TypedValue;
 import org.action.ActionHandler;
 import org.exception.MissingArgumentException;
-import org.javatuples.Quartet;
 
 import java.text.MessageFormat;
 import java.util.*;
@@ -45,49 +44,48 @@ public class ChatCommand {
         Set<String> actionPossibleModifiers = this.actionHandler.getPossibleModifiers();
 
         assert indexedMessage != null;
-        Quartet<Integer, Integer, String, List<IndexedMessage.TypedCharacter>> indexedToken =
-                indexedMessage.getTokenStartingFromIndex(0);
+        IndexedMessage.Token indexedToken = indexedMessage.getTokenStartingFromIndex(0);
 
         while (indexedToken != null) {
-            if (indexedToken.getValue2().isEmpty()) {
+            if (indexedToken.token().isEmpty()) {
                 processingContext.addMessages(
                         "Empty token [\"\"] detected, it was ignored",
                         ProcessingContext.MessageType.PARSING_WARNING
                 );
 
-                indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.getValue1());
+                indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.endIndex());
                 continue;
             }
 
-            IndexedMessage.TypedCharacter firstC = indexedToken.getValue3().getFirst();
+            IndexedMessage.TypedCharacter firstC = indexedToken.typedCharacters().getFirst();
             if (firstC.characterType() == IndexedMessage.TypedCharacter.CharacterType.LITERAL
                     || firstC.characterType() == IndexedMessage.TypedCharacter.CharacterType.SENTENCE_START) {
                 processingContext.addMessages(
-                        MessageFormat.format("Token \"{0}\" was ignored", indexedToken.getValue2()),
+                        MessageFormat.format("Token \"{0}\" was ignored", indexedToken.token()),
                         ProcessingContext.MessageType.PARSING_WARNING
                 );
 
-                indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.getValue1());
+                indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.endIndex());
                 continue;
             }
 
 
-            String strModifier = indexedToken.getValue2().substring(1).toUpperCase();
+            String strModifier = indexedToken.token().substring(ChatCommand.MODIFIER_PREFIX.length()).toUpperCase();
             if (strModifier.length() < ChatCommand.MODIFIER_PREFIX.length() + 1) {
                 processingContext.addMessages(
                         MessageFormat.format("Token \"{0}\" was ignored", strModifier),
                         ProcessingContext.MessageType.PARSING_WARNING
                 );
 
-                indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.getValue1());
+                indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.endIndex());
                 continue;
             } else if (!actionPossibleModifiers.contains(strModifier)) {
                 processingContext.addMessages(
-                        MessageFormat.format("Token \"{0}\" was ignored because it is not a valid modifier for action \"{1}\"", indexedToken.getValue2(), this.actionHandler.toString()),
+                        MessageFormat.format("Token \"{0}\" was ignored because it is not a valid modifier for action \"{1}\"", indexedToken.token(), this.actionHandler.toString()),
                         ProcessingContext.MessageType.PARSING_WARNING
                 );
 
-                indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.getValue1());
+                indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.endIndex());
                 continue;
             }
 
@@ -100,27 +98,27 @@ public class ChatCommand {
                         ProcessingContext.MessageType.PARSING_WARNING
                 );
 
-                indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.getValue1());
+                indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.endIndex());
                 continue;
             }
 
 
             List<String> arguments = new ArrayList<>();
             while (true) {
-                indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.getValue1());
+                indexedToken = indexedMessage.getTokenStartingFromIndex(indexedToken.endIndex());
 
                 if (indexedToken == null) {
                     break;
-                } else if (indexedToken.getValue3().getFirst().characterType() == IndexedMessage.TypedCharacter.CharacterType.MODIFIER
-                        && actionPossibleModifiers.contains(indexedToken.getValue2().substring(ChatCommand.MODIFIER_PREFIX.length()).toUpperCase())) {
+                } else if (indexedToken.typedCharacters().getFirst().characterType() == IndexedMessage.TypedCharacter.CharacterType.MODIFIER
+                        && actionPossibleModifiers.contains(indexedToken.token().substring(ChatCommand.MODIFIER_PREFIX.length()).toUpperCase())) {
                     break;
-                } else if (indexedToken.getValue2().isEmpty()) {
+                } else if (indexedToken.token().isEmpty()) {
                     processingContext.addMessages(
                             "Empty token [\"\"] detected, it was ignored",
                             ProcessingContext.MessageType.PARSING_WARNING
                     );
                 } else {
-                    arguments.add(indexedToken.getValue2());
+                    arguments.add(indexedToken.token());
                 }
             }
 

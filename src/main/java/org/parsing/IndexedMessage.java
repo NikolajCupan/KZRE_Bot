@@ -1,7 +1,5 @@
 package org.parsing;
 
-import org.javatuples.Quartet;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalInt;
@@ -22,7 +20,7 @@ public class IndexedMessage {
         return this.typedCharacters.isEmpty() ? null : this.typedCharacters.getLast();
     }
 
-    public Quartet<Integer, Integer, String, List<TypedCharacter>> getTokenStartingFromIndex(int index) {
+    public Token getTokenStartingFromIndex(int index) {
         if (index >= this.typedCharacters.size()
                 || (index == this.typedCharacters.size() - 1 &&  this.typedCharacters.get(index).characterType == TypedCharacter.CharacterType.SENTENCE_END)) {
             return null;
@@ -54,17 +52,20 @@ public class IndexedMessage {
         StringBuilder stringBuilder = new StringBuilder();
         List<TypedCharacter> indexedString = new ArrayList<>();
         this.typedCharacters.subList(startIndex, endIndex).forEach(element -> {
-            stringBuilder.append(element.character); indexedString.add(element);
+            stringBuilder.append(element.character);
+            indexedString.add(element);
         });
 
         if (indexedString.isEmpty()) {
             indexedString.add(new TypedCharacter(null, TypedCharacter.CharacterType.NULL));
         }
 
-        return new Quartet<>(startIndex, endIndex, stringBuilder.toString(), indexedString);
+        return new Token(startIndex, endIndex, stringBuilder.toString(), indexedString);
     }
 
     public record TypedCharacter(Character character, CharacterType characterType) {
         public enum CharacterType{ NULL, LITERAL, MODIFIER, SENTENCE_START, SENTENCE_END }
     }
+
+    public record Token(int startIndex, int endIndex, String token, List<IndexedMessage.TypedCharacter> typedCharacters) {}
 }

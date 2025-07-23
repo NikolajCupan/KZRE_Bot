@@ -4,7 +4,6 @@ import info.debatty.java.stringsimilarity.NormalizedLevenshtein;
 import jakarta.persistence.*;
 import org.database.Persistable;
 import org.hibernate.Session;
-import org.javatuples.Pair;
 import org.utility.Constants;
 import org.utility.ProcessingContext;
 
@@ -68,7 +67,7 @@ public class TagDto implements Persistable {
                 .getSingleResultOrNull() != null;
     }
 
-    public static List<Pair<Double, TagDto>> findSimilarTags(String newTag, String snowflakeGuild, Session session) {
+    public static List<TagDto.TagDistance> findSimilarTags(String newTag, String snowflakeGuild, Session session) {
         String sql = "SELECT * FROM " + TagDto.TAG_TABLE_NAME + " WHERE "
                 + TagDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild";
         List<TagDto> tags = session.createNativeQuery(sql, TagDto.class)
@@ -77,8 +76,8 @@ public class TagDto implements Persistable {
 
         NormalizedLevenshtein levenshtein = new NormalizedLevenshtein();
         return tags.stream()
-                .map(tag -> new Pair<>(levenshtein.distance(tag.getTag(), newTag), tag))
-                .filter(pair -> pair.getValue0() <= Constants.LEVENSHTEIN_DISTANCE_WARNING_THRESHOLD)
+                .map(tag -> new TagDto.TagDistance(tag, levenshtein.distance(tag.getTag(), newTag)))
+                .filter(pair -> pair.distance <= Constants.LEVENSHTEIN_DISTANCE_WARNING_THRESHOLD)
                 .toList();
     }
 
@@ -103,4 +102,6 @@ public class TagDto implements Persistable {
     public String getTag() {
         return this.tag;
     }
+
+    public record TagDistance(TagDto tagDto, double distance) {}
 }

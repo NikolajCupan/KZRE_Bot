@@ -1,7 +1,5 @@
 package org.utility;
 
-import org.javatuples.Pair;
-
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -9,18 +7,18 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Request {
-    private static final Map<Pair<String, String>, Lock> LOCKS;
+    private static final Map<Request.RequestKey, Lock> LOCKS;
 
     static {
         LOCKS = Collections.synchronizedMap(new HashMap<>());
     }
 
-    private final Pair<String, String> key;
+    private final Request.RequestKey key;
     private final String guildId;
     private boolean lockAquired;
 
     public Request(String channelId, String userId, String guildId) {
-        this.key = new Pair<>(channelId, userId);
+        this.key = new Request.RequestKey(channelId, userId);
         this.guildId = guildId;
         this.lockAquired = false;
     }
@@ -53,7 +51,7 @@ public class Request {
         });
     }
 
-    public Pair<String, String> getKey() {
+    public Request.RequestKey getKey() {
         return this.key;
     }
 
@@ -64,18 +62,20 @@ public class Request {
     public static class PendingListenersRemovalsComparator implements Comparator<Request> {
         @Override
         public int compare(Request lhs, Request rhs) {
-            int comparison = lhs.getKey().getValue0().compareTo(rhs.getKey().getValue0());
-            return comparison != 0 ? comparison : lhs.getKey().getValue1().compareTo(rhs.getKey().getValue1());
+            int comparison = lhs.getKey().channelId().compareTo(rhs.getKey().channelId());
+            return comparison != 0 ? comparison : lhs.getKey().userId().compareTo(rhs.getKey().userId());
         }
     }
 
     public static class GuildUserLockComparator implements Comparator<Request> {
         @Override
         public int compare(Request lhs, Request rhs) {
-            int comparison = lhs.getKey().getValue1().compareTo(rhs.getKey().getValue1());
+            int comparison = lhs.getKey().userId().compareTo(rhs.getKey().userId());
             return comparison != 0 ? comparison : lhs.getGuildId().compareTo(rhs.getGuildId());
         }
     }
+
+    private record RequestKey(String channelId, String userId) {}
 
     private static class Lock {
         private static final int MAXIMUM_NUMBER_OF_LOCKS;

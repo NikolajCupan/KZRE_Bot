@@ -7,7 +7,6 @@ import org.database.dto.TagDto;
 import org.exception.CustomException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
-import org.javatuples.Pair;
 import org.parsing.ChatCommand;
 import org.parsing.ChatConfirmation;
 import org.parsing.Modifier;
@@ -122,6 +121,10 @@ public class Quote extends ActionHandler {
             Check.isBooleanFalse(
                     QuoteDto.quoteExists(chatNewQuote, event.getGuild().getId(), session), true, "Quote " + chatNewQuote, "already exists"
             );
+
+            QuoteDto newQuote = new QuoteDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewQuote);
+            List<QuoteDto.QuoteDistance> similarQuotes = QuoteDto.findSimilarQuotes(chatNewQuote, event.getGuild().getId(), session);
+            boolean forceSwitchPresent = chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.FORCE);
         } finally {
             transaction.commit();
             session.close();
@@ -143,15 +146,15 @@ public class Quote extends ActionHandler {
             );
 
             TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewTag);
-            List<Pair<Double, TagDto>> similarTags = TagDto.findSimilarTags(chatNewTag, event.getGuild().getId(), session);
-
+            List<TagDto.TagDistance> similarTags = TagDto.findSimilarTags(chatNewTag, event.getGuild().getId(), session);
             boolean forceSwitchPresent = chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.FORCE);
+
             if (!similarTags.isEmpty() && !forceSwitchPresent) {
                 int timeToConfirmSeconds = ConfirmationMessageListener.addConfirmationMessageListener(
                         event, newTag, Constants.CONFIRMATION_ATTEMPTS
                 );
 
-                String message = Quote.getSimilarTagsWarning(similarTags, timeToConfirmSeconds);
+                String message = Quote.getSimilarTagsWarningMessage(similarTags, timeToConfirmSeconds);
                 processingContext.addMessages(message, ProcessingContext.MessageType.INFO_RESULT);
             } else {
                 newTag.persist(processingContext, session);
@@ -172,17 +175,17 @@ public class Quote extends ActionHandler {
         }
     }
 
-    private static String getSimilarTagsWarning(List<Pair<Double, TagDto>> similarTags, int timeToConfirmSeconds) {
+    private static String getSimilarTagsWarningMessage(List<TagDto.TagDistance> similarTags, int timeToConfirmSeconds) {
         int maxDisplayedSimilarTags = 5;
-        List<Pair<Double, TagDto>> sortedSimilarTags = similarTags.stream()
-                .sorted(Comparator.comparing(Pair::getValue0))
+        List<TagDto.TagDistance> sortedSimilarTags = similarTags.stream()
+                .sorted(Comparator.comparing(TagDto.TagDistance::distance))
                 .limit(maxDisplayedSimilarTags)
                 .toList();
 
         StringBuilder stringBuilder = new StringBuilder();
         sortedSimilarTags.stream().limit(maxDisplayedSimilarTags).forEach(pair ->
-                stringBuilder.append("Similarity: ").append(Helper.formatDecimalNumber(100 - pair.getValue0() * 100, 2))
-                        .append(" %, tag: ").append(pair.getValue1().getTag()).append("\n")
+                stringBuilder.append("Similarity: ").append(Helper.formatDecimalNumber(100 - pair.distance() * 100, 2))
+                        .append(" %, tag: ").append(pair.tagDto().getTag()).append("\n")
         );
 
         if (similarTags.size() == 1) {

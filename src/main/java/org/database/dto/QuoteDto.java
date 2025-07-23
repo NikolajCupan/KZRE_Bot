@@ -8,7 +8,6 @@ import com.dynatrace.hash4j.similarity.SimilarityHashing;
 import jakarta.persistence.*;
 import jakarta.persistence.criteria.*;
 import org.hibernate.Session;
-import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.utility.Constants;
@@ -66,6 +65,13 @@ public class QuoteDto {
     @Column(name = QuoteDto.DATE_MODIFIED_COLUMN_NAME, nullable = false, insertable = false)
     private LocalDateTime dateModified;
 
+    public QuoteDto(String snowflakeAuthor, String snowflakeGuild, String quote) {
+        this.snowflakeAuthor = snowflakeAuthor;
+        this.snowflakeGuild = snowflakeGuild;
+        this.quote = quote;
+        this.quoteSimhash = QuoteDto.generateSimhash(quote);
+    }
+
     public static boolean quoteExists(String newQuote, String snowflakeGuild, Session session) {
         MessageDigest messageDigest;
         try {
@@ -86,34 +92,17 @@ public class QuoteDto {
                 .getSingleResultOrNull() != null;
     }
 
-    public static List<Pair<Double, QuoteDto>> findSimilarQuotes(String newQuote, String snowflakeGuild, Session session) {
-        ToLongFunction<String> hashFunction = s -> Hashing.komihash5_0().hashCharsToLong(s);
-        SimilarityHashPolicy policy = SimilarityHashing.superMinHash(1024, 1);
-        SimilarityHasher hasher = policy.createHasher();
-
-        List<String> tokens = Helper.normalizeAndTokenizeString(newQuote);
-        byte[] newQuoteSimHash = hasher.compute(ElementHashProvider.ofCollection(tokens, hashFunction));
-
-
-        CriteriaBuilder builder = session.getCriteriaBuilder();
-        CriteriaQuery<Tuple> criteria = builder.createQuery(Tuple.class);
-        Root<QuoteDto> root = criteria.from(QuoteDto.class);
-
-        Path<Long> idQuotePath = root.get(Helper.snakeCaseToCamelCase(QuoteDto.ID_QUOTE_COLUMN_NAME));
-        Path<byte[]> quoteSimhashPath = root.get(Helper.snakeCaseToCamelCase(QuoteDto.QUOTE_SIMHASH_COLUMN_NAME));
-        CompoundSelection<Tuple> selection = builder.tuple(quoteSimhashPath, idQuotePath);
-
-        criteria.select(selection);
-        List<Tuple> simhashes = session.createQuery(criteria).getResultList();
+    public static List<QuoteDto.QuoteDistance> findSimilarQuotes(String newQuote, String snowflakeGuild, Session session) {
+        byte[] newQuoteSimhash = QuoteDto.generateSimhash(newQuote);
+        List<QuoteDto.QuoteSimhashWrapper> existingSimhashes = QuoteDto.getExistingSimhashes(session);
         Map<Long, Double> similarQuotesIds = new HashMap<>();
 
-        for (Tuple tuple : simhashes) {
-            long idQuote = tuple.get(idQuotePath);
-            byte[] simhash = tuple.get(quoteSimhashPath);
+        SimilarityHashPolicy policy = QuoteDto.generateHashPolicy();
 
-            double distance = 1.0 - policy.getFractionOfEqualComponents(newQuoteSimHash, simhash);
+        for (QuoteDto.QuoteSimhashWrapper simhashWrapper : existingSimhashes) {
+            double distance = 1.0 - policy.getFractionOfEqualComponents(newQuoteSimhash, simhashWrapper.simhash());
             if (distance <= Constants.SIMHASH_DISTANCE_WARNING_THRESHOLD) {
-                similarQuotesIds.put(idQuote, distance);
+                similarQuotesIds.put(simhashWrapper.idQuote(), distance);
             }
         }
 
@@ -126,11 +115,40 @@ public class QuoteDto {
                 .getResultList();
 
         return quoteDtos.stream()
-                .map(quote -> new Pair<>(similarQuotesIds.get(quote.getIdQuote()), quote))
+                .map(quote -> new QuoteDto.QuoteDistance(quote, similarQuotesIds.get(quote.getIdQuote())))
                 .toList();
+    }
+
+    private static List<QuoteDto.QuoteSimhashWrapper> getExistingSimhashes(Session session) {
+        CriteriaBuilder builder = session.getCriteriaBuilder();
+        CriteriaQuery<QuoteDto.QuoteSimhashWrapper> criteria = builder.createQuery(QuoteDto.QuoteSimhashWrapper.class);
+        Root<QuoteDto> root = criteria.from(QuoteDto.class);
+
+        Path<Long> idQuotePath = root.get(Helper.snakeCaseToCamelCase(QuoteDto.ID_QUOTE_COLUMN_NAME));
+        Path<byte[]> quoteSimhashPath = root.get(Helper.snakeCaseToCamelCase(QuoteDto.QUOTE_SIMHASH_COLUMN_NAME));
+        CompoundSelection<QuoteDto.QuoteSimhashWrapper> selection = builder.construct(QuoteDto.QuoteSimhashWrapper.class, idQuotePath, quoteSimhashPath);
+
+        criteria.select(selection);
+        return session.createQuery(criteria).getResultList();
+    }
+
+    private static byte[] generateSimhash(String value) {
+        ToLongFunction<String> hashFunction = s -> Hashing.komihash5_0().hashCharsToLong(s);
+        SimilarityHashPolicy policy = QuoteDto.generateHashPolicy();
+        SimilarityHasher hasher = policy.createHasher();
+
+        List<String> tokens = Helper.normalizeAndTokenizeString(value);
+        return hasher.compute(ElementHashProvider.ofCollection(tokens, hashFunction));
+    }
+
+    private static SimilarityHashPolicy generateHashPolicy() {
+        return SimilarityHashing.superMinHash(1024, 1);
     }
 
     public long getIdQuote() {
         return this.idQuote;
     }
+
+    public record QuoteDistance(QuoteDto quoteDto, double distance) {}
+    private record QuoteSimhashWrapper(long idQuote, byte[] simhash) {}
 }
