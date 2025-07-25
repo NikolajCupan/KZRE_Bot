@@ -2,6 +2,7 @@ package org.database.dto;
 
 import info.debatty.java.stringsimilarity.NormalizedLevenshtein;
 import jakarta.persistence.*;
+import org.database.DtoWithDistance;
 import org.database.Persistable;
 import org.hibernate.Session;
 import org.utility.Constants;
@@ -9,6 +10,7 @@ import org.utility.ProcessingContext;
 
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -98,27 +100,59 @@ public class TagDto implements Persistable {
                 .toList();
     }
 
+    public static List<TagDto> mapStringTagsToDtos(Collection<String> tags, String snowflakeGuild, Session session) {
+        String sql = "SELECT * FROM " + TagDto.TAG_TABLE_NAME + " WHERE "
+                + TagDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild AND "
+                + TagDto.TAG_COLUMN_NAME + " IN :p_tags";
+        List<TagDto> tagDtos = session.createNativeQuery(sql, TagDto.class)
+                .setParameter("p_snowflakeGuild", snowflakeGuild)
+                .setParameter("p_tags", tags)
+                .getResultList();
+
+        assert tagDtos.size() == tags.size();
+        return tagDtos;
+    }
+
     @Override
     public void persist(ProcessingContext processingContext, Session session) {
         session.persist(this);
 
         processingContext.addMessages(
-                MessageFormat.format("New tag \"{0}\" was successfully created", this.getTag()),
+                MessageFormat.format("New tag \"{0}\" was successfully created", this.tag),
                 ProcessingContext.MessageType.SUCCESS_RESULT
         );
     }
 
     @Override
-    public void rejectPersist(ProcessingContext processingContext) {
+    public void cancelPersist(ProcessingContext processingContext) {
         processingContext.addMessages(
-                MessageFormat.format("Creation of tag \"{0}\" was canceled", this.getTag()),
+                MessageFormat.format("Creation of tag \"{0}\" was canceled", this.tag),
                 ProcessingContext.MessageType.INFO_RESULT
         );
+    }
+
+    public long getIdTag() {
+        return this.idTag;
     }
 
     public String getTag() {
         return this.tag;
     }
 
-    public record TagDistance(TagDto tagDto, double distance) {}
+    public record TagDistance(TagDto tagDto, double distance) implements DtoWithDistance {
+        @Override
+        public String getName() {
+            return "tag";
+        }
+
+        @Override
+        public String getValue() {
+            return this.tagDto.getTag();
+        }
+
+        @Override
+        public double getDistance() {
+            return this.distance;
+        }
+    }
 }

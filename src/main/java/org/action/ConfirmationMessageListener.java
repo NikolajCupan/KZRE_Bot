@@ -164,7 +164,7 @@ public class ConfirmationMessageListener extends MessageListener {
     }
 
     private void handleDecline(ProcessingContext processingContext) {
-        this.objectToStore.rejectPersist(processingContext);
+        this.objectToStore.cancelPersist(processingContext);
         ConfirmationMessageListener.removeConfirmationMessageListener(this);
     }
 

@@ -2,6 +2,8 @@ package org.action;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.*;
+import org.database.DtoWithDistance;
+import org.database.Persistable;
 import org.database.dto.QuoteDto;
 import org.database.dto.TagDto;
 import org.exception.CustomException;
@@ -130,9 +132,11 @@ public class Quote extends ActionHandler {
             List<String> nonExistentTags = TagDto.filterOutExistentTags(allTags, event.getGuild().getId(), session);
             Check.isEmpty(nonExistentTags, true, "Non existent tags");
 
-            QuoteDto newQuote = new QuoteDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewQuote);
+            List<TagDto> tagDtos = TagDto.mapStringTagsToDtos(allTags, event.getGuild().getId(), session);
+            QuoteDto newQuote = new QuoteDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewQuote, tagDtos);
             List<QuoteDto.QuoteDistance> similarQuotes = QuoteDto.findSimilarQuotes(chatNewQuote, event.getGuild().getId(), session);
-            boolean forceSwitchPresent = chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.FORCE);
+
+            Quote.tryToPersistEntity(newQuote, similarQuotes, session, event, chatCommand, processingContext);
         } finally {
             transaction.commit();
             session.close();
@@ -155,69 +159,89 @@ public class Quote extends ActionHandler {
 
             TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewTag);
             List<TagDto.TagDistance> similarTags = TagDto.findSimilarTags(chatNewTag, event.getGuild().getId(), session);
-            boolean forceSwitchPresent = chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.FORCE);
 
-            if (!similarTags.isEmpty() && !forceSwitchPresent) {
-                int timeToConfirmSeconds = ConfirmationMessageListener.addConfirmationMessageListener(
-                        event, newTag, Constants.CONFIRMATION_ATTEMPTS
-                );
-
-                String message = Quote.getSimilarTagsWarningMessage(similarTags, timeToConfirmSeconds);
-                processingContext.addMessages(message, ProcessingContext.MessageType.INFO_RESULT);
-            } else {
-                newTag.persist(processingContext, session);
-
-                if (!similarTags.isEmpty() && forceSwitchPresent) {
-                    processingContext.addMessages(
-                            MessageFormat.format(
-                                    "Similar tag(s) were detected, action would normally require confirmation, however, since \"{0}\" switch modifier was used, the action was executed immediately",
-                                    ActionHandler.GlobalActionModifier.FORCE.toString()
-                            ),
-                            ProcessingContext.MessageType.FORCE_SWITCH_WARNING
-                    );
-                }
-            }
+            Quote.tryToPersistEntity(newTag, similarTags, session, event, chatCommand, processingContext);
         } finally {
             transaction.commit();
             session.close();
         }
     }
 
-    private static String getSimilarTagsWarningMessage(List<TagDto.TagDistance> similarTags, int timeToConfirmSeconds) {
-        int maxDisplayedSimilarTags = 5;
-        List<TagDto.TagDistance> sortedSimilarTags = similarTags.stream()
-                .sorted(Comparator.comparing(TagDto.TagDistance::distance))
-                .limit(maxDisplayedSimilarTags)
+    private static<T extends Persistable, U extends DtoWithDistance> void tryToPersistEntity(
+            T persistable, List<U> similarEntities, Session session, MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext
+    ) {
+        boolean forceSwitchPresent = chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.FORCE);
+
+        if (!similarEntities.isEmpty() && !forceSwitchPresent) {
+            int timeToConfirmSeconds = ConfirmationMessageListener.addConfirmationMessageListener(
+                    event, persistable, Constants.CONFIRMATION_ATTEMPTS
+            );
+
+            String message = Quote.getSimilarEntitiesWarningMessage(similarEntities, timeToConfirmSeconds, 5);
+            processingContext.addMessages(message, ProcessingContext.MessageType.INFO_RESULT);
+        } else {
+            persistable.persist(processingContext, session);
+
+            if (!similarEntities.isEmpty() && forceSwitchPresent) {
+                int similarEntitiesCount = similarEntities.size();
+                String entityName = similarEntities.getFirst().getName();
+
+                String startOfMessage = similarEntitiesCount > 1
+                        ? "Multiple similar " + entityName + "s (" + similarEntitiesCount + ") were detected"
+                        : "Similar " + entityName + " was detected";
+
+                processingContext.addMessages(
+                        MessageFormat.format(
+                                "{0}, action would normally require confirmation, however, since \"{1}\" switch modifier was used, the action was executed immediately",
+                                startOfMessage,
+                                GlobalActionModifier.FORCE.toString()
+                        ),
+                        ProcessingContext.MessageType.FORCE_SWITCH_WARNING
+                );
+            }
+        }
+    }
+
+    private static<T extends DtoWithDistance> String getSimilarEntitiesWarningMessage(
+            List<T> similarEntities, int timeToConfirmSeconds, int maxDisplayedSimilarEntities
+    ) {
+        List<T> sortedSimilarEntities = similarEntities.stream()
+                .sorted(Comparator.comparing(DtoWithDistance::getDistance))
+                .limit(maxDisplayedSimilarEntities)
                 .toList();
 
+        String entityName = similarEntities.getFirst().getName();
         StringBuilder stringBuilder = new StringBuilder();
-        sortedSimilarTags.stream().limit(maxDisplayedSimilarTags).forEach(pair ->
-                stringBuilder.append("Similarity: ").append(Helper.formatDecimalNumber(100 - pair.distance() * 100, 2))
-                        .append(" %, tag: ").append(pair.tagDto().getTag()).append("\n")
+        sortedSimilarEntities.stream().limit(maxDisplayedSimilarEntities).forEach(dtoWithDistance ->
+                stringBuilder.append("Similarity: ").append(Helper.formatDecimalNumber(100 - dtoWithDistance.getDistance() * 100, 2))
+                        .append(" %, ").append(entityName).append(": ").append(dtoWithDistance.getValue()).append("\n")
         );
 
-        if (similarTags.size() == 1) {
-            return MessageFormat.format("Similar tag detected, confirm action in {0} seconds by replying \"{1}\" or \"{2}\":\n{3}",
+        if (similarEntities.size() == 1) {
+            return MessageFormat.format("Similar {0} detected, confirm action in {1} seconds by replying \"{2}\" or \"{3}\":\n{4}",
+                    entityName,
                     timeToConfirmSeconds,
                     ChatConfirmation.Status.YES.toString(),
                     ChatConfirmation.Status.NO.toString(),
                     stringBuilder.toString()
             );
-        } else if (similarTags.size() <= maxDisplayedSimilarTags) {
-            return MessageFormat.format("Multiple similar tags found ({0}), confirm action in {1} seconds by replying \"{2}\" or \"{3}\":\n{4}",
-                    similarTags.size(),
+        } else if (similarEntities.size() <= maxDisplayedSimilarEntities) {
+            return MessageFormat.format("Multiple similar {0} found ({1}), confirm action in {2} seconds by replying \"{3}\" or \"{4}\":\n{5}",
+                    entityName + "s",
+                    similarEntities.size(),
                     timeToConfirmSeconds,
                     ChatConfirmation.Status.YES.toString(),
                     ChatConfirmation.Status.NO.toString(),
                     stringBuilder.toString()
             );
         } else {
-            return MessageFormat.format("Multiple similar tags found ({0}), confirm action in {1} seconds by replying \"{2}\" or \"{3}\", showing first {4} results:\n{5}",
-                similarTags.size(),
+            return MessageFormat.format("Multiple similar {0} found ({1}), confirm action in {2} seconds by replying \"{3}\" or \"{4}\", showing first {5} results:\n{6}",
+                entityName + "s",
+                similarEntities.size(),
                 timeToConfirmSeconds,
                 ChatConfirmation.Status.YES.toString(),
                 ChatConfirmation.Status.NO.toString(),
-                maxDisplayedSimilarTags,
+                maxDisplayedSimilarEntities,
                 stringBuilder.toString()
             );
         }

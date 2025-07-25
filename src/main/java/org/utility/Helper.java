@@ -5,6 +5,8 @@ import java.text.Normalizer;
 import java.text.NumberFormat;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 public class Helper {
     public static double formatDecimalNumber(double value, int decimalPlaces) {
@@ -32,17 +34,19 @@ public class Helper {
         resultString = Normalizer.normalize(resultString, Normalizer.Form.NFD)
                 .replaceAll("[^\\p{ASCII}]", "");
 
-        return List.of(resultString.split(" ")).stream()
+        return Stream.of(resultString.split(" "))
                 .map(element -> element.replaceAll("[^A-Za-z0-9]", ""))
                 .filter(element -> !element.isBlank())
                 .toList();
     }
 
     public static<T> String stringifyCollection(Collection<T> collection) {
-        return Helper.stringifyCollection(collection, true);
+        return Helper.stringifyCollection(collection, T::toString, true);
     }
 
-    public static<T> String stringifyCollection(Collection<T> collection, boolean addQuotes) {
+    public static<T> String stringifyCollection(
+            Collection<T> collection, Function<T, String> stringifyMethod, boolean addQuotes
+    ) {
         if (collection == null || collection.isEmpty()) {
             return "[]";
         }
@@ -52,7 +56,7 @@ public class Helper {
 
         collection.forEach(element -> {
             if (addQuotes) stringBuilder.append('\"');
-            stringBuilder.append(element.toString());
+            stringBuilder.append(stringifyMethod.apply(element));
             if (addQuotes) stringBuilder.append('\"');
             stringBuilder.append(", ");
         });

@@ -7,13 +7,17 @@ import com.dynatrace.hash4j.similarity.SimilarityHasher;
 import com.dynatrace.hash4j.similarity.SimilarityHashing;
 import jakarta.persistence.*;
 import jakarta.persistence.criteria.*;
+import org.database.DtoWithDistance;
+import org.database.Persistable;
 import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.utility.Constants;
 import org.utility.Helper;
+import org.utility.ProcessingContext;
 
 import java.security.MessageDigest;
+import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.ToLongFunction;
@@ -25,7 +29,7 @@ import java.util.function.ToLongFunction;
                 @UniqueConstraint(columnNames = {QuoteDto.SNOWFLAKE_GUILD_COLUMN_NAME, QuoteDto.QUOTE_HASH_COLUMN_NAME})
         }
 )
-public class QuoteDto {
+public class QuoteDto implements Persistable {
     public static final String QUOTE_TABLE_NAME = "quote";
 
     public static final String ID_QUOTE_COLUMN_NAME = "id_quote";
@@ -65,11 +69,18 @@ public class QuoteDto {
     @Column(name = QuoteDto.DATE_MODIFIED_COLUMN_NAME, nullable = false, insertable = false)
     private LocalDateTime dateModified;
 
-    public QuoteDto(String snowflakeAuthor, String snowflakeGuild, String quote) {
+    @Transient
+    private List<TagDto> tagDtos;
+
+    public QuoteDto() {}
+
+    public QuoteDto(String snowflakeAuthor, String snowflakeGuild, String quote, List<TagDto> tagDtos) {
         this.snowflakeAuthor = snowflakeAuthor;
         this.snowflakeGuild = snowflakeGuild;
         this.quote = quote;
         this.quoteSimhash = QuoteDto.generateSimhash(quote);
+
+        this.tagDtos = tagDtos;
     }
 
     public static boolean quoteExists(String newQuote, String snowflakeGuild, Session session) {
@@ -145,10 +156,54 @@ public class QuoteDto {
         return SimilarityHashing.superMinHash(1024, 1);
     }
 
+    @Override
+    public void persist(ProcessingContext processingContext, Session session) {
+        assert !this.tagDtos.isEmpty();
+
+        session.persist(this);
+        this.tagDtos.forEach(tagDto -> session.persist(new QuoteTagDto(tagDto.getIdTag(), this.idQuote)));
+
+        String stringifiedTags = Helper.stringifyCollection(this.tagDtos, TagDto::getTag, true);
+        String tagsMessage = "with " + (this.tagDtos.size() > 1 ? "tags " : "tag ") + stringifiedTags;
+
+        processingContext.addMessages(
+                MessageFormat.format("New quote \"{0}\" {1} was successfully created", this.quote, tagsMessage),
+                ProcessingContext.MessageType.SUCCESS_RESULT
+        );
+    }
+
+    @Override
+    public void cancelPersist(ProcessingContext processingContext) {
+        processingContext.addMessages(
+                MessageFormat.format("Creation of quote \"{0}\" was canceled", this.quote),
+                ProcessingContext.MessageType.INFO_RESULT
+        );
+    }
+
     public long getIdQuote() {
         return this.idQuote;
     }
 
-    public record QuoteDistance(QuoteDto quoteDto, double distance) {}
+    public String getQuote() {
+        return this.quote;
+    }
+
+    public record QuoteDistance(QuoteDto quoteDto, double distance) implements DtoWithDistance {
+        @Override
+        public String getName() {
+            return "quote";
+        }
+
+        @Override
+        public String getValue() {
+            return this.quoteDto.getQuote();
+        }
+
+        @Override
+        public double getDistance() {
+            return this.distance;
+        }
+    }
+
     private record QuoteSimhashWrapper(long idQuote, byte[] simhash) {}
 }

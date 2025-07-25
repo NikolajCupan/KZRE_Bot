@@ -215,7 +215,7 @@ public class ChatCommand {
                     MessageFormat.format(
                             "The defined escape character \"{0}\" is not valid, valid characters are: {1}",
                             potentialEscapeCharacter,
-                            Helper.stringifyCollection(ChatCommand.VALID_ESCAPE_CHARACTERS, false)
+                            Helper.stringifyCollection(ChatCommand.VALID_ESCAPE_CHARACTERS, String::toString, false)
                     ),
                     ProcessingContext.MessageType.PARSING_ERROR
             );
