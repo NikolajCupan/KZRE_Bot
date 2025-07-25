@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.entities.emoji.CustomEmoji;
 import net.dv8tion.jda.api.interactions.commands.SlashCommandReference;
+import org.utility.Helper;
 import org.utility.ProcessingContext;
 import org.utility.TypedValue;
 import org.action.ActionHandler;
@@ -210,12 +211,12 @@ public class ChatCommand {
         }
 
         if (!ChatCommand.VALID_ESCAPE_CHARACTERS.contains(potentialEscapeCharacter)) {
-            StringBuilder stringBuilder = new StringBuilder();
-            ChatCommand.VALID_ESCAPE_CHARACTERS.forEach(element -> stringBuilder.append('\"').append(element).append("\", "));
-            stringBuilder.setLength(stringBuilder.length() - 2);
-
             processingContext.addMessages(
-                    MessageFormat.format("The defined escape character \"{0}\" is not valid, valid characters are: [{1}]", potentialEscapeCharacter, stringBuilder.toString()),
+                    MessageFormat.format(
+                            "The defined escape character \"{0}\" is not valid, valid characters are: {1}",
+                            potentialEscapeCharacter,
+                            Helper.stringifyCollection(ChatCommand.VALID_ESCAPE_CHARACTERS, false)
+                    ),
                     ProcessingContext.MessageType.PARSING_ERROR
             );
             return -1;
@@ -446,26 +447,24 @@ public class ChatCommand {
         }
     }
 
-    public<T extends Enum<T>> TypedValue getFirstArgument(T modifier, boolean allowNullArgument, boolean setUsed, ProcessingContext processingContext) {
-        List<TypedValue> arguments = this.modifierMap.get(modifier);
-        TypedValue firstArgument = arguments.getFirst();
-
-        if (!allowNullArgument) {
-            if (firstArgument.getType() == TypedValue.Type.NULL) {
-                throw new MissingArgumentException(firstArgument.getStateMessage(modifier.toString(), false));
-            }
-        }
-
-        ChatCommand.warnIfResolutionIsNotValidArgument(modifier, firstArgument, processingContext);
+    public<T extends Enum<T>> TypedValue getFirstArgument(
+            T modifier, boolean allowNullArgument, boolean setUsed, ProcessingContext processingContext
+    ) {
+        // Ignore invalid resolution warnings and check first argument only
+        ProcessingContext dummy = new ProcessingContext();
+        List<TypedValue> arguments = this.getArguments(modifier, allowNullArgument, false, dummy);
+        ChatCommand.warnIfResolutionIsNotValidArgument(modifier, arguments.getFirst(), processingContext);
 
         if (setUsed) {
-            firstArgument.setUsed();
+            arguments.getFirst().setUsed();
         }
 
-        return firstArgument;
+        return arguments.getFirst();
     }
 
-    public<T extends Enum<T>, U extends Enum<U>> U getFirstArgumentAsEnum(T modifier, Class<U> requiredEnumClass, boolean setUsed, ProcessingContext processingContext) {
+    public<T extends Enum<T>, U extends Enum<U>> U getFirstArgumentAsEnum(
+            T modifier, Class<U> requiredEnumClass, boolean setUsed, ProcessingContext processingContext
+    ) {
         List<TypedValue> arguments = this.modifierMap.get(modifier);
         TypedValue firstArgument = arguments.getFirst();
 
@@ -489,6 +488,28 @@ public class ChatCommand {
         }
 
         return requiredEnumClass.cast(Enum.valueOf(requiredEnumClass, firstArgument.getUsedValue().toUpperCase()));
+    }
+
+    public<T extends Enum<T>> List<TypedValue> getArguments(
+            T modifier, boolean allowNullArgument, boolean setUsed, ProcessingContext processingContext
+    ) {
+        List<TypedValue> arguments = this.modifierMap.get(modifier);
+
+        if (!allowNullArgument) {
+            if (arguments.getFirst().getType() == TypedValue.Type.NULL) {
+                throw new MissingArgumentException(arguments.getFirst().getStateMessage(modifier.toString(), false));
+            }
+        }
+
+        arguments.forEach(argument -> {
+            ChatCommand.warnIfResolutionIsNotValidArgument(modifier, argument, processingContext);
+
+            if (setUsed) {
+                argument.setUsed();
+            }
+        });
+
+        return arguments;
     }
 
     public<T extends Enum<T>> boolean isSwitchModifierPresent(T modifier) {

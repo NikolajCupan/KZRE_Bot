@@ -3,6 +3,7 @@ package org.utility;
 import java.math.RoundingMode;
 import java.text.Normalizer;
 import java.text.NumberFormat;
+import java.util.Collection;
 import java.util.List;
 
 public class Helper {
@@ -35,6 +36,31 @@ public class Helper {
                 .map(element -> element.replaceAll("[^A-Za-z0-9]", ""))
                 .filter(element -> !element.isBlank())
                 .toList();
+    }
+
+    public static<T> String stringifyCollection(Collection<T> collection) {
+        return Helper.stringifyCollection(collection, true);
+    }
+
+    public static<T> String stringifyCollection(Collection<T> collection, boolean addQuotes) {
+        if (collection == null || collection.isEmpty()) {
+            return "[]";
+        }
+
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append('[');
+
+        collection.forEach(element -> {
+            if (addQuotes) stringBuilder.append('\"');
+            stringBuilder.append(element.toString());
+            if (addQuotes) stringBuilder.append('\"');
+            stringBuilder.append(", ");
+        });
+
+        stringBuilder.setLength(stringBuilder.length() - 2);
+        stringBuilder.append(']');
+
+        return stringBuilder.toString();
     }
 
     public enum EmptyEnum {}

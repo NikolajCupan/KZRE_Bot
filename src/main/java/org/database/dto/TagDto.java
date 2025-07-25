@@ -9,7 +9,9 @@ import org.utility.ProcessingContext;
 
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -65,6 +67,21 @@ public class TagDto implements Persistable {
                 .setParameter("p_snowflakeGuild", snowflakeGuild)
                 .setParameter("p_tag", newTag)
                 .getSingleResultOrNull() != null;
+    }
+
+    public static List<String> filterOutExistentTags(Set<String> tagsToCheck, String snowflakeGuild, Session session) {
+        String sql = "SELECT * FROM " + TagDto.TAG_TABLE_NAME + " WHERE "
+                + TagDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild AND "
+                + TagDto.TAG_COLUMN_NAME + " IN :p_tagsToCheck";
+        List<TagDto> existentTags = session.createNativeQuery(sql, TagDto.class)
+                .setParameter("p_snowflakeGuild", snowflakeGuild)
+                .setParameter("p_tagsToCheck", tagsToCheck)
+                .getResultList();
+
+        Set<String> nonExistentTags = new HashSet<>(tagsToCheck);
+        existentTags.forEach(existentTagDto -> nonExistentTags.remove(existentTagDto.getTag()));
+
+        return nonExistentTags.stream().toList();
     }
 
     public static List<TagDto.TagDistance> findSimilarTags(String newTag, String snowflakeGuild, Session session) {

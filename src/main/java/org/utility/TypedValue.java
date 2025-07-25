@@ -21,6 +21,11 @@ public class TypedValue {
         this.used = false;
     }
 
+    @Override
+    public String toString() {
+        return this.rawValue;
+    }
+
     public String getStateMessage(String modifierName, boolean includeDefaultValueUsage) {
         String message = "";
         switch (this.resolution) {

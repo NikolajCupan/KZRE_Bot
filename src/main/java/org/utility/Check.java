@@ -2,8 +2,15 @@ package org.utility;
 
 import org.exception.InvalidActionArgumentException;
 import java.text.MessageFormat;
+import java.util.Collection;
 
 public class Check {
+    public static<T> boolean isEmpty(Collection<T> testedCollection, boolean throwIfFalse, String customValueName) {
+        return Check.throwIfFalse(
+                Check.isEmpty(testedCollection), throwIfFalse, customValueName, "found: " + Helper.stringifyCollection(testedCollection), null
+        );
+    }
+
     public static boolean isBooleanFalse(boolean testedValue, boolean throwIfFalse, String customValueName, String customMessage) {
         return Check.throwIfFalse(
                 Check.isBooleanFalse(testedValue), throwIfFalse, customValueName, "cannot be true", customMessage
@@ -69,6 +76,10 @@ public class Check {
                 Check.isDoubleInRange(testedValue, minInclusive, maxInclusive), throwIfFalse,
                 customValueName, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), customMessage
         );
+    }
+
+    private static<T> boolean isEmpty(Collection<T> testedCollection) {
+        return testedCollection.isEmpty();
     }
 
     private static boolean isBooleanFalse(boolean testedValue) {
@@ -144,7 +155,7 @@ public class Check {
             String finalValueName = (customValueName != null && !customValueName.isBlank()) ? customValueName : "Value";
             String finalMessage = (customMessage != null && !customMessage.isBlank()) ? customMessage : defaultMessage;
 
-            throw new InvalidActionArgumentException(finalValueName + " " + finalValueName);
+            throw new InvalidActionArgumentException(finalValueName + " " + finalMessage);
         }
 
         return testResult;

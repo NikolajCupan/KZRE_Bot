@@ -5,6 +5,7 @@ import org.MessageListener;
 import org.parsing.ChatCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.utility.Helper;
 import org.utility.ProcessingContext;
 import org.utility.TypedValue;
 
@@ -41,26 +42,24 @@ public class ActionMessageListener extends MessageListener {
             boolean modifierAddedAfterParsing = addedAfterParsingModifiers.contains(modifierName);
             boolean modifierIsSwitch = arguments.isEmpty() || arguments.getFirst().getType() == TypedValue.Type.SWITCH;
 
-            StringBuilder stringBuilder = new StringBuilder();
-            if (!unusedArguments.isEmpty()) {
-                unusedArguments.forEach(element -> stringBuilder.append("\"").append(element.getRawValue()).append("\", "));
-                stringBuilder.setLength(stringBuilder.length() - 2);
-            }
-
             if (!modifierAccessed) {
                 if (!modifierAddedAfterParsing && !unusedArguments.isEmpty()) {
                     if (modifierIsSwitch) {
                         processingContext.addMessages(
                                 MessageFormat.format(
-                                        "Modifier \"{0}\" and its arguments [{1}] were not used, additionally \"{0}\" is a switch modifier and should not be provided with any arguments",
+                                        "Modifier \"{0}\" and its arguments {1} were not used, additionally \"{0}\" is a switch modifier and should not be provided with any arguments",
                                         modifierName,
-                                        stringBuilder.toString()
+                                        Helper.stringifyCollection(unusedArguments)
                                 ),
                                 ProcessingContext.MessageType.WARNING
                         );
                     } else {
                         processingContext.addMessages(
-                                MessageFormat.format("Modifier \"{0}\" and its arguments [{1}] were not used", modifierName, stringBuilder.toString()),
+                                MessageFormat.format(
+                                        "Modifier \"{0}\" and its arguments {1} were not used",
+                                        modifierName,
+                                        Helper.stringifyCollection(unusedArguments)
+                                ),
                                 ProcessingContext.MessageType.WARNING
                         );
                     }
@@ -73,12 +72,20 @@ public class ActionMessageListener extends MessageListener {
             } else if (!unusedArguments.isEmpty()) {
                 if (modifierIsSwitch) {
                     processingContext.addMessages(
-                            MessageFormat.format("Modifier \"{0}\" is a switch modifier, it should not be provided with any arguments, arguments were ignored: [{1}]", modifierName, stringBuilder.toString()),
+                            MessageFormat.format(
+                                    "Modifier \"{0}\" is a switch modifier, it should not be provided with any arguments, arguments were ignored: {1}",
+                                    modifierName,
+                                    Helper.stringifyCollection(unusedArguments)
+                            ),
                             ProcessingContext.MessageType.WARNING
                     );
                 } else {
                     processingContext.addMessages(
-                            MessageFormat.format("Not all arguments for modifier \"{0}\" were used, the unused arguments are: [{1}]", modifierName, stringBuilder.toString()),
+                            MessageFormat.format(
+                                    "Not all arguments for modifier \"{0}\" were used, the unused arguments are: {1}",
+                                    modifierName,
+                                    Helper.stringifyCollection(unusedArguments)
+                            ),
                             ProcessingContext.MessageType.WARNING
                     );
                 }

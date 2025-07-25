@@ -14,6 +14,7 @@ import org.utility.*;
 
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Quote extends ActionHandler {
     static {
@@ -114,6 +115,10 @@ public class Quote extends ActionHandler {
         Check.isNotBlank(chatNewQuote, true, "New quote", null);
         Check.isInRange(chatNewQuote.length(), 1, Constants.QUOTE_MAX_LENGTH, true, "Quote length", null);
 
+        Set<String> allTags = chatCommand.getArguments(ActionModifier.TAG, false, true, processingContext).stream()
+                .map(argument -> argument.getTrimmedUsedValue(processingContext))
+                .collect(Collectors.toSet());
+
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
 
@@ -121,6 +126,9 @@ public class Quote extends ActionHandler {
             Check.isBooleanFalse(
                     QuoteDto.quoteExists(chatNewQuote, event.getGuild().getId(), session), true, "Quote " + chatNewQuote, "already exists"
             );
+
+            List<String> nonExistentTags = TagDto.filterOutExistentTags(allTags, event.getGuild().getId(), session);
+            Check.isEmpty(nonExistentTags, true, "Non existent tags");
 
             QuoteDto newQuote = new QuoteDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewQuote);
             List<QuoteDto.QuoteDistance> similarQuotes = QuoteDto.findSimilarQuotes(chatNewQuote, event.getGuild().getId(), session);
