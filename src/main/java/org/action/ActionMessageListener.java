@@ -42,54 +42,57 @@ public class ActionMessageListener extends MessageListener {
             boolean modifierAddedAfterParsing = addedAfterParsingModifiers.contains(modifierName);
             boolean modifierIsSwitch = arguments.isEmpty() || arguments.getFirst().getType() == TypedValue.Type.SWITCH;
 
+            if (modifierAccessed && unusedArguments.isEmpty()) {
+                // No warnings needed
+                assert !modifierIsSwitch || arguments.isEmpty();
+                continue;
+            } else if (!modifierAccessed && modifierAddedAfterParsing) {
+                // No warnings needed
+                assert unusedArguments.isEmpty();
+                continue;
+            }
+
+
+            String modifierTypeName = modifierIsSwitch ? "Switch modifier" : "Modifier";
+            String warningMessage;
             if (!modifierAccessed) {
-                if (!modifierAddedAfterParsing && !unusedArguments.isEmpty()) {
-                    if (modifierIsSwitch) {
-                        processingContext.addMessages(
-                                MessageFormat.format(
-                                        "Modifier \"{0}\" and its arguments {1} were not used, additionally \"{0}\" is a switch modifier and should not be provided with any arguments",
-                                        modifierName,
-                                        Helper.stringifyCollection(unusedArguments)
-                                ),
-                                ProcessingContext.MessageType.WARNING
-                        );
-                    } else {
-                        processingContext.addMessages(
-                                MessageFormat.format(
-                                        "Modifier \"{0}\" and its arguments {1} were not used",
-                                        modifierName,
-                                        Helper.stringifyCollection(unusedArguments)
-                                ),
-                                ProcessingContext.MessageType.WARNING
-                        );
-                    }
-                } else if (!modifierAddedAfterParsing) {
-                    processingContext.addMessages(
-                            MessageFormat.format("{0} \"{1}\" was not used", modifierIsSwitch ? "Switch modifier" : "Modifier", modifierName),
-                            ProcessingContext.MessageType.WARNING
-                    );
-                }
-            } else if (!unusedArguments.isEmpty()) {
-                if (modifierIsSwitch) {
-                    processingContext.addMessages(
-                            MessageFormat.format(
-                                    "Modifier \"{0}\" is a switch modifier, it should not be provided with any arguments, arguments were ignored: {1}",
-                                    modifierName,
-                                    Helper.stringifyCollection(unusedArguments)
-                            ),
-                            ProcessingContext.MessageType.WARNING
+                if (unusedArguments.isEmpty()) {
+                    warningMessage = MessageFormat.format(
+                            "{0} \"{1}\" was not used", modifierTypeName, modifierName
                     );
                 } else {
-                    processingContext.addMessages(
-                            MessageFormat.format(
-                                    "Not all arguments for modifier \"{0}\" were used, the unused arguments are: {1}",
-                                    modifierName,
-                                    Helper.stringifyCollection(unusedArguments)
-                            ),
-                            ProcessingContext.MessageType.WARNING
+                    warningMessage = MessageFormat.format(
+                            "{0} \"{1}\" and its arguments {2} were not used",
+                            modifierTypeName,
+                            modifierName,
+                            Helper.stringifyCollection(unusedArguments)
+                    );
+
+                    if (modifierIsSwitch) {
+                        warningMessage += ", additionally switch modifiers should not be provided with any arguments";
+                    }
+                }
+            } else {
+                if (modifierIsSwitch) {
+                    assert unusedArguments.size() == arguments.size();
+                    warningMessage = MessageFormat.format(
+                            "{0} \"{1}\" should not be provided with any arguments, all arguments were ignored: {2}",
+                            modifierTypeName,
+                            modifierName,
+                            Helper.stringifyCollection(unusedArguments)
+                    );
+                } else {
+                    warningMessage = MessageFormat.format(
+                            "{0} \"{1}\" did not use all arguments, the unused arguments are: {2}",
+                            modifierTypeName,
+                            modifierName,
+                            Helper.stringifyCollection(unusedArguments)
                     );
                 }
             }
+
+            assert !warningMessage.isBlank();
+            processingContext.addMessages(warningMessage, ProcessingContext.MessageType.WARNING);
         }
     }
 
