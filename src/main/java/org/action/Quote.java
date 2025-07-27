@@ -5,10 +5,12 @@ import org.*;
 import org.database.DtoWithDistance;
 import org.database.Persistable;
 import org.database.dto.QuoteDto;
+import org.database.dto.QuoteTagDto;
 import org.database.dto.TagDto;
 import org.exception.CustomException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.hibernate.query.NativeQuery;
 import org.parsing.ChatCommand;
 import org.parsing.ChatConfirmation;
 import org.parsing.Modifier;
@@ -42,6 +44,23 @@ public class Quote extends ActionHandler {
         );
     }
 
+    private static long getCountModifierArgument(ChatCommand chatCommand, ProcessingContext processingContext) {
+        TypedValue chatCount = chatCommand.getFirstArgument(ActionModifier.COUNT, false, true, processingContext);
+
+        long resultsCount;
+        if (chatCount.getType() == TypedValue.Type.WHOLE_NUMBER) {
+            resultsCount = Long.parseLong(chatCount.getUsedValue());
+        } else {
+            ProcessingContext dummy = new ProcessingContext();
+            assert chatCommand.getFirstArgumentAsEnum(ActionModifier.COUNT, CountArgument.class, true, dummy) == CountArgument.ALL;
+            assert chatCount.getType() == TypedValue.Type.ENUMERATOR;
+
+            resultsCount = Long.MAX_VALUE;
+        }
+
+        return resultsCount;
+    }
+
     @Override
     public void executeAction(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         try {
@@ -63,17 +82,67 @@ public class Quote extends ActionHandler {
         return ActionModifier.class;
     }
 
-    private void handleGetQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {}
+    private void handleGetQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
+        OrderArgument chatOrder = chatCommand.getFirstArgumentAsEnum(ActionModifier.ORDER, OrderArgument.class, true, processingContext);
+        Set<String> chatTags = chatCommand.getArguments(ActionModifier.TAG, true, true, processingContext).stream()
+                .map(argument -> argument.getTrimmedUsedValue(processingContext))
+                .collect(Collectors.toSet());
+        long resultsCount = Quote.getCountModifierArgument(chatCommand, processingContext);
+
+        Session session = Main.DATABASE_SESSION_FACTORY.openSession();
+        Transaction transaction = session.beginTransaction();
+
+        try {
+            if (!chatTags.isEmpty()) {
+                List<String> nonExistentTags = TagDto.filterOutExistingTags(chatTags, event.getGuild().getId(), session);
+                Check.isEmpty(nonExistentTags, true, "Non existent tags");
+            }
+
+            String sqlOrder = "";
+            switch (chatOrder) {
+                case OrderArgument.RANDOM -> sqlOrder = "rand()";
+                case OrderArgument.NEWEST -> sqlOrder = QuoteDto.DATE_MODIFIED_COLUMN_NAME + " desc";
+                case OrderArgument.OLDEST -> sqlOrder = QuoteDto.DATE_MODIFIED_COLUMN_NAME + " asc";
+                case OrderArgument.ALPHABETICAL -> sqlOrder = QuoteDto.QUOTE_COLUMN_NAME + " asc";
+                case OrderArgument.REVERSE_ALPHABETICAL -> sqlOrder = QuoteDto.QUOTE_COLUMN_NAME + " desc";
+            }
+
+            String sql = "SELECT * FROM " + QuoteDto.QUOTE_TABLE_NAME + " WHERE "
+                    + QuoteDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild ";
+            if (!chatTags.isEmpty()) {
+                sql += "AND " + QuoteDto.ID_QUOTE_COLUMN_NAME + " IN :p_idsQuotes ";
+            }
+            sql += "ORDER BY " + sqlOrder + " LIMIT :p_resultsCount";
+
+            NativeQuery<QuoteDto> query = session.createNativeQuery(sql, QuoteDto.class)
+                    .setParameter("p_snowflakeGuild", event.getGuild().getId())
+                    .setParameter("p_resultsCount", resultsCount);
+            if (!chatTags.isEmpty()) {
+                List<Long> idsQuotesToUse = QuoteTagDto.findByTags(chatTags, session).stream()
+                        .map(QuoteTagDto::getIdQuote)
+                        .toList();
+                query.setParameter("p_idsQuotes", idsQuotesToUse);
+            }
+
+            List<QuoteDto> quotes = query.getResultList();
+
+            if (quotes.isEmpty()) {
+                processingContext.addMessages("No quotes found", ProcessingContext.MessageType.INFO_RESULT);
+            } else {
+                StringBuilder stringBuilder = new StringBuilder();
+                quotes.forEach(quote -> stringBuilder.append(quote.getQuote()).append("\n\n"));
+                stringBuilder.setLength(stringBuilder.length() - 2);
+                processingContext.addMessages(stringBuilder.toString(), ProcessingContext.MessageType.SUCCESS_RESULT);
+            }
+        } finally {
+          transaction.commit();
+          session.close();
+        }
+    }
 
     private void handleGetTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         OrderArgument chatOrder = chatCommand.getFirstArgumentAsEnum(ActionModifier.ORDER, OrderArgument.class, true, processingContext);
-        TypedValue chatCount = chatCommand.getFirstArgument(ActionModifier.COUNT, false, true, processingContext);
-
-        long resultsCount = Long.MAX_VALUE;
-        if (chatCount.getType() == TypedValue.Type.WHOLE_NUMBER) {
-            resultsCount = Long.parseLong(chatCount.getUsedValue());
-        }
-
+        long resultsCount = Quote.getCountModifierArgument(chatCommand, processingContext);
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
         Transaction transaction = session.beginTransaction();
@@ -129,7 +198,7 @@ public class Quote extends ActionHandler {
                     QuoteDto.quoteExists(chatNewQuote, event.getGuild().getId(), session), true, "Quote " + chatNewQuote, "already exists"
             );
 
-            List<String> nonExistentTags = TagDto.filterOutExistentTags(allTags, event.getGuild().getId(), session);
+            List<String> nonExistentTags = TagDto.filterOutExistingTags(allTags, event.getGuild().getId(), session);
             Check.isEmpty(nonExistentTags, true, "Non existent tags");
 
             List<TagDto> tagDtos = TagDto.mapStringTagsToDtos(allTags, event.getGuild().getId(), session);

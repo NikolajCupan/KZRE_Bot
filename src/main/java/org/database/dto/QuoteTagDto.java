@@ -1,6 +1,10 @@
 package org.database.dto;
 
 import jakarta.persistence.*;
+import org.hibernate.Session;
+
+import java.util.Collection;
+import java.util.List;
 
 @Entity
 @Table(
@@ -24,9 +28,27 @@ public class QuoteTagDto {
     @Column(name = QuoteTagDto.ID_QUOTE_COLUMN_NAME, nullable = false)
     private long idQuote;
 
+    public QuoteTagDto() {}
+
     public QuoteTagDto(long idTag, long idQuote) {
         this.idTag = idTag;
         this.idQuote = idQuote;
+    }
+
+    public static List<QuoteTagDto> findByTags(Collection<String> tags, Session session) {
+        String innerSql = "SELECT " + TagDto.ID_TAG_COLUMN_NAME + " FROM "
+                + TagDto.TAG_TABLE_NAME + " WHERE " + TagDto.TAG_COLUMN_NAME
+                + " IN :p_tags";
+        String sql = "SELECT * FROM " + QuoteTagDto.QUOTE_TAG_TABLE_NAME
+                + " WHERE " + QuoteTagDto.ID_TAG_COLUMN_NAME + " IN ("
+                + innerSql + ")";
+        return session.createNativeQuery(sql, QuoteTagDto.class)
+                .setParameter("p_tags", tags)
+                .getResultList();
+    }
+
+    public long getIdQuote() {
+        return this.idQuote;
     }
 
     protected record QuoteTagDtoPK(long idTag, long idQuote) {

@@ -509,6 +509,10 @@ public class ChatCommand {
             }
         });
 
+        if (arguments.size() == 1 && arguments.getFirst().getType() == TypedValue.Type.NULL) {
+            return new ArrayList<>();
+        }
+
         return arguments;
     }
 

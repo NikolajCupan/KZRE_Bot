@@ -71,17 +71,17 @@ public class TagDto implements Persistable {
                 .getSingleResultOrNull() != null;
     }
 
-    public static List<String> filterOutExistentTags(Set<String> tagsToCheck, String snowflakeGuild, Session session) {
+    public static List<String> filterOutExistingTags(Set<String> tagsToCheck, String snowflakeGuild, Session session) {
         String sql = "SELECT * FROM " + TagDto.TAG_TABLE_NAME + " WHERE "
                 + TagDto.SNOWFLAKE_GUILD_COLUMN_NAME + " = :p_snowflakeGuild AND "
                 + TagDto.TAG_COLUMN_NAME + " IN :p_tagsToCheck";
-        List<TagDto> existentTags = session.createNativeQuery(sql, TagDto.class)
+        List<TagDto> existingTags = session.createNativeQuery(sql, TagDto.class)
                 .setParameter("p_snowflakeGuild", snowflakeGuild)
                 .setParameter("p_tagsToCheck", tagsToCheck)
                 .getResultList();
 
         Set<String> nonExistentTags = new HashSet<>(tagsToCheck);
-        existentTags.forEach(existentTagDto -> nonExistentTags.remove(existentTagDto.getTag()));
+        existingTags.forEach(existingTagDto -> nonExistentTags.remove(existingTagDto.getTag()));
 
         return nonExistentTags.stream().toList();
     }
