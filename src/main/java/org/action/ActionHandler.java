@@ -31,7 +31,7 @@ public abstract class ActionHandler {
 
     public Set<String> getPossibleModifiers() {
         Set<String> possibleModifiers = new HashSet<>();
-        for (GlobalActionModifier enumerator : GlobalActionModifier.class.getEnumConstants()) {
+        for (ActionHandler.GlobalActionModifier enumerator : ActionHandler.GlobalActionModifier.class.getEnumConstants()) {
             possibleModifiers.add(enumerator.toString());
         }
 
@@ -45,7 +45,7 @@ public abstract class ActionHandler {
 
     public Enum<?> getModifierEnumerator(String strModifier) {
         try {
-            return Enum.valueOf(GlobalActionModifier.class, strModifier);
+            return Enum.valueOf(ActionHandler.GlobalActionModifier.class, strModifier);
         } catch (IllegalArgumentException ignored) {
             // noinspection unchecked, rawtypes
             return Enum.valueOf((Class)this.getModifierEnumClass(), strModifier);

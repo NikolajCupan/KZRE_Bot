@@ -23,36 +23,36 @@ import java.util.stream.Collectors;
 public class Quote extends ActionHandler {
     static {
         ActionHandler.ACTION_MODIFIERS.put(
-                ActionModifier.TYPE,
-                new Modifier<>(TypeArgument.class, null, false, false, false, false, null, null)
+                Quote.ActionModifier.TYPE,
+                new Modifier<>(Quote.TypeArgument.class, Quote.TypeArgument.GET_QUOTE, false, false, false, false, null, null)
         );
         ActionHandler.ACTION_MODIFIERS.put(
-                ActionModifier.TAG,
+                Quote.ActionModifier.TAG,
                 new Modifier<>(Helper.EmptyEnum.class, null, true, false, false, false, null, null)
         );
         ActionHandler.ACTION_MODIFIERS.put(
-                ActionModifier.ORDER,
-                new Modifier<>(OrderArgument.class, OrderArgument.NEWEST, false, false, false, false, null, null)
+                Quote.ActionModifier.ORDER,
+                new Modifier<>(Quote.OrderArgument.class, Quote.OrderArgument.NEWEST, false, false, false, false, null, null)
         );
         ActionHandler.ACTION_MODIFIERS.put(
-                ActionModifier.COUNT,
-                new Modifier<>(CountArgument.class, 5L, false, false, true, false, 1L, Long.MAX_VALUE)
+                Quote.ActionModifier.COUNT,
+                new Modifier<>(Quote.CountArgument.class, 5L, false, false, true, false, 1L, Long.MAX_VALUE)
         );
         ActionHandler.ACTION_MODIFIERS.put(
-                ActionModifier.VALUE,
+                Quote.ActionModifier.VALUE,
                 new Modifier<>(Helper.EmptyEnum.class, null, true, false, false, false, null, null)
         );
     }
 
     private static long getCountModifierArgument(ChatCommand chatCommand, ProcessingContext processingContext) {
-        TypedValue chatCount = chatCommand.getFirstArgument(ActionModifier.COUNT, false, true, processingContext);
+        TypedValue chatCount = chatCommand.getFirstArgument(Quote.ActionModifier.COUNT, false, true, processingContext);
 
         long resultsCount;
         if (chatCount.getType() == TypedValue.Type.WHOLE_NUMBER) {
             resultsCount = Long.parseLong(chatCount.getUsedValue());
         } else {
             ProcessingContext dummy = new ProcessingContext();
-            assert chatCommand.getFirstArgumentAsEnum(ActionModifier.COUNT, CountArgument.class, true, dummy) == CountArgument.ALL;
+            assert chatCommand.getFirstArgumentAsEnum(Quote.ActionModifier.COUNT, Quote.CountArgument.class, true, dummy) == Quote.CountArgument.ALL;
             assert chatCount.getType() == TypedValue.Type.ENUMERATOR;
 
             resultsCount = Long.MAX_VALUE;
@@ -64,13 +64,13 @@ public class Quote extends ActionHandler {
     @Override
     public void executeAction(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         try {
-            TypeArgument typeArgument = chatCommand.getFirstArgumentAsEnum(ActionModifier.TYPE, TypeArgument.class, true, processingContext);
+            Quote.TypeArgument typeArgument = chatCommand.getFirstArgumentAsEnum(Quote.ActionModifier.TYPE, Quote.TypeArgument.class, true, processingContext);
 
             switch (typeArgument) {
-                case TypeArgument.GET_QUOTE -> this.handleGetQuote(event, chatCommand, processingContext);
-                case TypeArgument.GET_TAG -> this.handleGetTag(event, chatCommand, processingContext);
-                case TypeArgument.NEW_QUOTE -> this.handleNewQuote(event, chatCommand, processingContext);
-                case TypeArgument.NEW_TAG -> this.handleNewTag(event, chatCommand, processingContext);
+                case Quote.TypeArgument.GET_QUOTE -> this.handleGetQuote(event, chatCommand, processingContext);
+                case Quote.TypeArgument.GET_TAG -> this.handleGetTag(event, chatCommand, processingContext);
+                case Quote.TypeArgument.NEW_QUOTE -> this.handleNewQuote(event, chatCommand, processingContext);
+                case Quote.TypeArgument.NEW_TAG -> this.handleNewTag(event, chatCommand, processingContext);
             }
         } catch (CustomException exception) {
             processingContext.addMessages(exception.getMessage(), ProcessingContext.MessageType.ERROR);
@@ -79,12 +79,12 @@ public class Quote extends ActionHandler {
 
     @Override
     protected Class<? extends Enum<?>> getModifierEnumClass() {
-        return ActionModifier.class;
+        return Quote.ActionModifier.class;
     }
 
     private void handleGetQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
-        OrderArgument chatOrder = chatCommand.getFirstArgumentAsEnum(ActionModifier.ORDER, OrderArgument.class, true, processingContext);
-        Set<String> chatTags = chatCommand.getArguments(ActionModifier.TAG, true, true, processingContext).stream()
+        Quote.OrderArgument chatOrder = chatCommand.getFirstArgumentAsEnum(Quote.ActionModifier.ORDER, Quote.OrderArgument.class, true, processingContext);
+        Set<String> chatTags = chatCommand.getArguments(Quote.ActionModifier.TAG, true, true, processingContext).stream()
                 .map(argument -> argument.getTrimmedUsedValue(processingContext))
                 .collect(Collectors.toSet());
         long resultsCount = Quote.getCountModifierArgument(chatCommand, processingContext);
@@ -100,11 +100,11 @@ public class Quote extends ActionHandler {
 
             String sqlOrder = "";
             switch (chatOrder) {
-                case OrderArgument.RANDOM -> sqlOrder = "rand()";
-                case OrderArgument.NEWEST -> sqlOrder = QuoteDto.DATE_MODIFIED_COLUMN_NAME + " desc";
-                case OrderArgument.OLDEST -> sqlOrder = QuoteDto.DATE_MODIFIED_COLUMN_NAME + " asc";
-                case OrderArgument.ALPHABETICAL -> sqlOrder = QuoteDto.QUOTE_COLUMN_NAME + " asc";
-                case OrderArgument.REVERSE_ALPHABETICAL -> sqlOrder = QuoteDto.QUOTE_COLUMN_NAME + " desc";
+                case Quote.OrderArgument.RANDOM -> sqlOrder = "rand()";
+                case Quote.OrderArgument.NEWEST -> sqlOrder = QuoteDto.DATE_MODIFIED_COLUMN_NAME + " desc";
+                case Quote.OrderArgument.OLDEST -> sqlOrder = QuoteDto.DATE_MODIFIED_COLUMN_NAME + " asc";
+                case Quote.OrderArgument.ALPHABETICAL -> sqlOrder = QuoteDto.QUOTE_COLUMN_NAME + " asc";
+                case Quote.OrderArgument.REVERSE_ALPHABETICAL -> sqlOrder = QuoteDto.QUOTE_COLUMN_NAME + " desc";
             }
 
             String sql = "SELECT * FROM " + QuoteDto.QUOTE_TABLE_NAME + " WHERE "
@@ -141,7 +141,7 @@ public class Quote extends ActionHandler {
     }
 
     private void handleGetTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
-        OrderArgument chatOrder = chatCommand.getFirstArgumentAsEnum(ActionModifier.ORDER, OrderArgument.class, true, processingContext);
+        Quote.OrderArgument chatOrder = chatCommand.getFirstArgumentAsEnum(Quote.ActionModifier.ORDER, Quote.OrderArgument.class, true, processingContext);
         long resultsCount = Quote.getCountModifierArgument(chatCommand, processingContext);
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
@@ -150,11 +150,11 @@ public class Quote extends ActionHandler {
         try {
             String sqlOrder = "";
             switch (chatOrder) {
-                case OrderArgument.RANDOM -> sqlOrder = "rand()";
-                case OrderArgument.NEWEST -> sqlOrder = TagDto.DATE_MODIFIED_COLUMN_NAME + " desc";
-                case OrderArgument.OLDEST -> sqlOrder = TagDto.DATE_MODIFIED_COLUMN_NAME + " asc";
-                case OrderArgument.ALPHABETICAL -> sqlOrder = TagDto.TAG_COLUMN_NAME + " asc";
-                case OrderArgument.REVERSE_ALPHABETICAL -> sqlOrder = TagDto.TAG_COLUMN_NAME + " desc";
+                case Quote.OrderArgument.RANDOM -> sqlOrder = "rand()";
+                case Quote.OrderArgument.NEWEST -> sqlOrder = TagDto.DATE_MODIFIED_COLUMN_NAME + " desc";
+                case Quote.OrderArgument.OLDEST -> sqlOrder = TagDto.DATE_MODIFIED_COLUMN_NAME + " asc";
+                case Quote.OrderArgument.ALPHABETICAL -> sqlOrder = TagDto.TAG_COLUMN_NAME + " asc";
+                case Quote.OrderArgument.REVERSE_ALPHABETICAL -> sqlOrder = TagDto.TAG_COLUMN_NAME + " desc";
             }
 
             String sql = "SELECT * FROM " + TagDto.TAG_TABLE_NAME + " WHERE "
@@ -181,12 +181,12 @@ public class Quote extends ActionHandler {
     }
 
     private void handleNewQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
-        String chatNewQuote = chatCommand.getFirstArgument(ActionModifier.VALUE, false, true, processingContext)
+        String chatNewQuote = chatCommand.getFirstArgument(Quote.ActionModifier.VALUE, false, true, processingContext)
                 .getTrimmedUsedValue(processingContext);
         Check.isNotBlank(chatNewQuote, true, "New quote", null);
         Check.isInRange(chatNewQuote.length(), 1, Constants.QUOTE_MAX_LENGTH, true, "Quote length", null);
 
-        Set<String> allTags = chatCommand.getArguments(ActionModifier.TAG, false, true, processingContext).stream()
+        Set<String> allTags = chatCommand.getArguments(Quote.ActionModifier.TAG, false, true, processingContext).stream()
                 .map(argument -> argument.getTrimmedUsedValue(processingContext))
                 .collect(Collectors.toSet());
 
@@ -213,7 +213,7 @@ public class Quote extends ActionHandler {
     }
 
     private void handleNewTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
-        String chatNewTag = chatCommand.getFirstArgument(ActionModifier.VALUE, false, true, processingContext)
+        String chatNewTag = chatCommand.getFirstArgument(Quote.ActionModifier.VALUE, false, true, processingContext)
                 .getTrimmedNormalizedLowercaseUsedValue(processingContext);
         Check.isNotBlank(chatNewTag, true, "New tag", null);
         Check.isInRange(chatNewTag.length(), 1, Constants.TAG_MAX_LENGTH, true, "Tag length", null);
@@ -263,7 +263,7 @@ public class Quote extends ActionHandler {
                         MessageFormat.format(
                                 "{0}, action would normally require confirmation, however, since \"{1}\" switch modifier was used, the action was executed immediately",
                                 startOfMessage,
-                                GlobalActionModifier.FORCE.toString()
+                                ActionHandler.GlobalActionModifier.FORCE.toString()
                         ),
                         ProcessingContext.MessageType.FORCE_SWITCH_WARNING
                 );
