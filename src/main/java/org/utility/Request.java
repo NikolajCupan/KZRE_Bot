@@ -75,7 +75,7 @@ public class Request {
         }
     }
 
-    private record RequestKey(String channelId, String userId) {}
+    public record RequestKey(String channelId, String userId) {}
 
     private static class Lock {
         private static final int MAXIMUM_NUMBER_OF_LOCKS;

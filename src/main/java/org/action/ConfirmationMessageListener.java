@@ -1,6 +1,5 @@
 package org.action;
 
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.Main;
@@ -14,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.utility.ProcessingContext;
 import org.utility.Request;
 
-import java.awt.*;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.*;

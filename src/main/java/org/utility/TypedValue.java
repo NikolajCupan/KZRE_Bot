@@ -95,10 +95,6 @@ public class TypedValue {
         return this.usedValue;
     }
 
-    public String getRawValue() {
-        return this.rawValue;
-    }
-
     public Class<? extends Enum<?>> getEnumClass() {
         return this.enumClass;
     }
