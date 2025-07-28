@@ -180,12 +180,29 @@ public class QuoteDto implements Persistable {
         );
     }
 
+    public void loadTagDtos(Session session) {
+        assert this.tagDtos == null;
+
+        String innerSql = "SELECT " + QuoteTagDto.ID_TAG_COLUMN_NAME + " FROM "
+                + QuoteTagDto.QUOTE_TAG_TABLE_NAME + " WHERE  " + QuoteTagDto.ID_QUOTE_COLUMN_NAME
+                + " = :p_idQuote";
+        String sql = "SELECT * FROM " + TagDto.TAG_TABLE_NAME + " WHERE "
+                + TagDto.ID_TAG_COLUMN_NAME + " IN (" + innerSql + ")";
+        this.tagDtos = session.createNativeQuery(sql, TagDto.class)
+                .setParameter("p_idQuote", this.idQuote)
+                .getResultList();
+    }
+
     public long getIdQuote() {
         return this.idQuote;
     }
 
     public String getQuote() {
         return this.quote;
+    }
+
+    public List<TagDto> getTagDtos() {
+        return this.tagDtos;
     }
 
     public record QuoteDistance(QuoteDto quoteDto, double distance) implements DtoWithDistance {

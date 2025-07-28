@@ -61,6 +61,25 @@ public class Quote extends ActionHandler {
         return resultsCount;
     }
 
+    private static String processGetQuoteResult(List<QuoteDto> quotes, ChatCommand chatCommand, Session session) {
+        boolean verboseSwitchPresent = chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.VERBOSE);
+        if (verboseSwitchPresent) {
+            quotes.forEach(quote -> quote.loadTagDtos(session));
+        }
+
+        StringBuilder stringBuilder = new StringBuilder();
+        quotes.forEach(quote -> {
+            stringBuilder.append(quote.getQuote());
+            if (verboseSwitchPresent) {
+                stringBuilder.append('\n').append(Helper.stringifyCollection(quote.getTagDtos(), TagDto::getTag, true));
+            }
+            stringBuilder.append("\n\n");
+        });
+        stringBuilder.setLength(stringBuilder.length() - 2);
+
+        return stringBuilder.toString();
+    }
+
     @Override
     public void executeAction(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         try {
@@ -123,16 +142,13 @@ public class Quote extends ActionHandler {
                         .toList();
                 query.setParameter("p_idsQuotes", idsQuotesToUse);
             }
-
             List<QuoteDto> quotes = query.getResultList();
 
             if (quotes.isEmpty()) {
                 processingContext.addMessages("No quotes found", ProcessingContext.MessageType.INFO_RESULT);
             } else {
-                StringBuilder stringBuilder = new StringBuilder();
-                quotes.forEach(quote -> stringBuilder.append(quote.getQuote()).append("\n\n"));
-                stringBuilder.setLength(stringBuilder.length() - 2);
-                processingContext.addMessages(stringBuilder.toString(), ProcessingContext.MessageType.SUCCESS_RESULT);
+                String message = Quote.processGetQuoteResult(quotes, chatCommand, session);
+                processingContext.addMessages(message, ProcessingContext.MessageType.SUCCESS_RESULT);
             }
         } finally {
           transaction.commit();
