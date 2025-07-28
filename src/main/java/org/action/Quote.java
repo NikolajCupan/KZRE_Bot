@@ -103,7 +103,8 @@ public class Quote extends ActionHandler {
 
     private void handleGetQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         Quote.OrderArgument chatOrder = chatCommand.getFirstArgumentAsEnum(Quote.ActionModifier.ORDER, Quote.OrderArgument.class, true, processingContext);
-        Set<String> chatTags = chatCommand.getArguments(Quote.ActionModifier.TAG, true, true, processingContext).stream()
+        ProcessingContext dummy = new ProcessingContext();
+        Set<String> chatTags = chatCommand.getArguments(Quote.ActionModifier.TAG, true, true, dummy).stream()
                 .map(argument -> argument.getTrimmedUsedValue(processingContext))
                 .collect(Collectors.toSet());
         long resultsCount = Quote.getCountModifierArgument(chatCommand, processingContext);

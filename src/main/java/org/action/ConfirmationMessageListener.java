@@ -84,9 +84,7 @@ public class ConfirmationMessageListener extends MessageListener {
             ConfirmationMessageListener.removeConfirmationMessageListener(messageListener);
             MessageListener.returnResponse(
                     Main.JDA_API.getChannelById(MessageChannel.class, messageListener.getChannelId()),
-                    new EmbedBuilder().setColor(Color.BLACK)
-                            .addField(ProcessingContext.MessageType.ERROR.toString(), "Confirmation timed out", false),
-                    false
+                    "Confirmation timed out"
             );
         }
     }

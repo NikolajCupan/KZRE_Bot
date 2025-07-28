@@ -29,7 +29,7 @@ public class IndexedMessage {
         int startIndex = index;
         TypedCharacter typedCharacter = this.typedCharacters.get(startIndex);
         while (typedCharacter.characterType == TypedCharacter.CharacterType.SENTENCE_END
-                || typedCharacter.character == ' ') {
+                || typedCharacter.character == ' ' || typedCharacter.character == '\n') {
             ++startIndex;
             typedCharacter = this.typedCharacters.get(startIndex);
         }
@@ -44,7 +44,7 @@ public class IndexedMessage {
             ++startIndex;
         } else {
             OptionalInt potentialEndIndex = IntStream.range(startIndex, this.typedCharacters.size())
-                    .filter(i -> this.typedCharacters.get(i).character == ' ')
+                    .filter(i -> this.typedCharacters.get(i).character == ' ' || this.typedCharacters.get(i).character == '\n')
                     .findFirst();
             endIndex = potentialEndIndex.isEmpty() ? this.typedCharacters.size() : potentialEndIndex.getAsInt();
         }

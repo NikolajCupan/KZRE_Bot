@@ -17,19 +17,15 @@ import java.awt.*;
 import java.util.List;
 
 public abstract class MessageListener extends ListenerAdapter {
-    protected static void returnResponse(MessageChannel channel, EmbedBuilder embedBuilder, boolean keepHeaders) {
-        EmbedBuilder processedEmbedBuilder = new EmbedBuilder(embedBuilder);
-
-        if (!keepHeaders) {
-            processedEmbedBuilder.clearFields();
-            embedBuilder.getFields().forEach(field -> {
-                assert field.getValue() != null;
-                processedEmbedBuilder.addField("", field.getValue(), false);
-            });
+    protected static void returnResponse(MessageChannel channel, String result) {
+        if (!result.isBlank()) {
+            channel.sendMessage(result).queue();
         }
+    }
 
-        if (!processedEmbedBuilder.isEmpty()) {
-            channel.sendMessageEmbeds(processedEmbedBuilder.build()).queue();
+    protected static void returnResponseVerbose(MessageChannel channel, EmbedBuilder result) {
+        if (!result.isEmpty()) {
+            channel.sendMessageEmbeds(result.build()).queue();
         }
     }
 
@@ -46,19 +42,33 @@ public abstract class MessageListener extends ListenerAdapter {
         }
     }
 
-    private static void afterMessageProcessed(
-            EmbedBuilder embedBuilder, ProcessingContext processingContext, boolean verboseResponse
-    ) {
+    private static String processRequestResult(ProcessingContext processingContext) {
+        if (processingContext.hasMessageOfType(ProcessingContext.MessageType.PARSING_ERROR)) {
+            return processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_ERROR))
+                    .getFirst().message();
+        } else if (processingContext.hasMessageOfType(ProcessingContext.MessageType.ERROR)) {
+            return processingContext.getMessages(List.of(ProcessingContext.MessageType.ERROR))
+                    .getFirst().message();
+        } else {
+            return processingContext.getMessages(List.of(ProcessingContext.MessageType.INFO_RESULT, ProcessingContext.MessageType.SUCCESS_RESULT))
+                    .getFirst().message();
+        }
+    }
+
+    private static EmbedBuilder processRequestResultVerbose(ProcessingContext processingContext) {
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+        embedBuilder.setColor(Color.BLACK);
+
         if (processingContext.hasMessageOfType(ProcessingContext.MessageType.PARSING_ERROR)) {
             processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_ERROR)).forEach(element ->
                     embedBuilder.addField(element.messageType().toString(), element.message(), false)
             );
-            return;
+            return embedBuilder;
         } else if (processingContext.hasMessageOfType(ProcessingContext.MessageType.ERROR)) {
             processingContext.getMessages(List.of(ProcessingContext.MessageType.ERROR)).forEach(element ->
                     embedBuilder.addField(element.messageType().toString(), element.message(), false)
             );
-            return;
+            return embedBuilder;
         }
 
 
@@ -66,11 +76,11 @@ public abstract class MessageListener extends ListenerAdapter {
                 embedBuilder.addField(element.messageType().toString(), element.message(), false)
         );
 
-        if (verboseResponse) {
-            processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_WARNING, ProcessingContext.MessageType.WARNING, ProcessingContext.MessageType.FORCE_SWITCH_WARNING)).forEach(element ->
-                    embedBuilder.addField(element.messageType().toString(), element.message(), false)
-            );
-        }
+        processingContext.getMessages(List.of(ProcessingContext.MessageType.PARSING_WARNING, ProcessingContext.MessageType.WARNING, ProcessingContext.MessageType.FORCE_SWITCH_WARNING)).forEach(element ->
+                embedBuilder.addField(element.messageType().toString(), element.message(), false)
+        );
+
+        return embedBuilder;
     }
 
     protected abstract boolean processMessage(MessageReceivedEvent event, ProcessingContext processingContext);
@@ -88,18 +98,15 @@ public abstract class MessageListener extends ListenerAdapter {
 
 
         ProcessingContext processingContext = new ProcessingContext();
-        EmbedBuilder embedBuilder = new EmbedBuilder();
-        embedBuilder.setColor(Color.BLACK);
-
         Request request = new Request(event.getChannel().getId(), event.getAuthor().getId(), event.getGuild().getId());
         boolean verboseResponse = false;
+
         Object lock = request.acquireLock();
         if (lock != null) {
             synchronized (lock) {
                 try {
                     MessageListener.beforeMessageProcessed(event);
                     verboseResponse = this.processMessage(event, processingContext);
-                    MessageListener.afterMessageProcessed(embedBuilder, processingContext, verboseResponse);
                 } finally {
                     request.releaseLock();
                 }
@@ -108,6 +115,12 @@ public abstract class MessageListener extends ListenerAdapter {
             processingContext.addMessages("Request could not be processed", ProcessingContext.MessageType.ERROR);
         }
 
-        MessageListener.returnResponse(event.getChannel(), embedBuilder, verboseResponse);
+        if (verboseResponse) {
+            EmbedBuilder response = MessageListener.processRequestResultVerbose(processingContext);
+            MessageListener.returnResponseVerbose(event.getChannel(), response);
+        } else {
+            String response = MessageListener.processRequestResult(processingContext);
+            MessageListener.returnResponse(event.getChannel(), response);
+        }
     }
 }

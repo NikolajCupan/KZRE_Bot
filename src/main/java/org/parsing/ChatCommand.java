@@ -370,7 +370,7 @@ public class ChatCommand {
                 if (inSentence) {
                     if (i + 1 < content.length()) {
                         char next = content.charAt(i + 1);
-                        if (next == ' ') {
+                        if (next == ' ' || next == '\n') {
                             inSentence = false;
                             indexedMessage.addCharacter(c, IndexedMessage.TypedCharacter.CharacterType.SENTENCE_END);
                         } else {
@@ -382,7 +382,7 @@ public class ChatCommand {
                     }
                 } else {
                     char previous = content.charAt(i - 1);
-                    if (previous == ' ') {
+                    if (previous == ' ' || previous == '\n') {
                         inSentence = true;
                         indexedMessage.addCharacter(c, IndexedMessage.TypedCharacter.CharacterType.SENTENCE_START);
                     } else {
