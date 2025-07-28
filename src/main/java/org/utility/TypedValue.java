@@ -42,37 +42,42 @@ public class TypedValue {
         return message;
     }
 
-    public String getTrimmedUsedValue(ProcessingContext processingContext) {
+    public String getTrimmedUsedValue(ProcessingContext processingContext, String valueName) {
         boolean hasLeadingWhitespace = this.usedValue.startsWith(" ");
         boolean hasTrailingWhitespace = this.usedValue.endsWith(" ");
         if (hasLeadingWhitespace && hasTrailingWhitespace) {
-            processingContext.addMessages("Trailing and leading whitespace(s) were removed from new tag", ProcessingContext.MessageType.WARNING);
+            processingContext.addMessages("Trailing and leading whitespace(s) were removed in the provided " + valueName, ProcessingContext.MessageType.WARNING);
         } else if (hasLeadingWhitespace) {
-            processingContext.addMessages("Leading whitespace(s) were removed from new tag", ProcessingContext.MessageType.WARNING);
+            processingContext.addMessages("Leading whitespace(s) were removed in the provided " + valueName, ProcessingContext.MessageType.WARNING);
         } else if (hasTrailingWhitespace) {
-            processingContext.addMessages("Trailing whitespace(s) were removed from new tag", ProcessingContext.MessageType.WARNING);
+            processingContext.addMessages("Trailing whitespace(s)were removed in the provided" + valueName, ProcessingContext.MessageType.WARNING);
         }
 
         return this.usedValue.trim();
     }
 
-    public String getTrimmedNormalizedUsedValue(ProcessingContext processingContext) {
-        String trimmedUsedValue = this.getTrimmedUsedValue(processingContext);
-        String normalizedUsedValue = trimmedUsedValue.replaceAll(" +", " ");
+    public String getTrimmedNormalizedUsedValue(ProcessingContext processingContext, String valueName) {
+        String trimmedUsedValue = this.getTrimmedUsedValue(processingContext, valueName);
 
-        if (!trimmedUsedValue.equals(normalizedUsedValue)) {
-            processingContext.addMessages("Multiple consecutive spaces were replaced with a single space", ProcessingContext.MessageType.WARNING);
+        String noNewLinesValue = trimmedUsedValue.replaceAll("[\\t\\n\\r]+"," ");
+        if (!trimmedUsedValue.equals(noNewLinesValue)) {
+            processingContext.addMessages("Line breaks and tabs were replaced with a single space in the provided " + valueName, ProcessingContext.MessageType.WARNING);
+        }
+
+        String normalizedUsedValue = noNewLinesValue.replaceAll(" +", " ");
+        if (!noNewLinesValue.equals(normalizedUsedValue)) {
+            processingContext.addMessages("Multiple consecutive spaces were replaced with a single space in the provided " + valueName, ProcessingContext.MessageType.WARNING);
         }
 
         return normalizedUsedValue;
     }
 
-    public String getTrimmedNormalizedLowercaseUsedValue(ProcessingContext processingContext) {
-        String normalizedUsedValue = this.getTrimmedNormalizedUsedValue(processingContext);
+    public String getTrimmedNormalizedLowercaseUsedValue(ProcessingContext processingContext, String valueName) {
+        String normalizedUsedValue = this.getTrimmedNormalizedUsedValue(processingContext, valueName);
         String lowercaseUsedValue = normalizedUsedValue.toLowerCase();
 
         if (!normalizedUsedValue.equals(lowercaseUsedValue)) {
-            processingContext.addMessages("Uppercase letters were converted to lowercase", ProcessingContext.MessageType.WARNING);
+            processingContext.addMessages("Uppercase letters were converted to lowercase in the provided " + valueName, ProcessingContext.MessageType.WARNING);
         }
 
         return lowercaseUsedValue;

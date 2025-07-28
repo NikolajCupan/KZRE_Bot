@@ -18,7 +18,7 @@ import java.util.List;
 
 public abstract class MessageListener extends ListenerAdapter {
     protected static void returnResponse(MessageChannel channel, String result) {
-        if (!result.isBlank()) {
+        if (result != null && !result.isBlank()) {
             channel.sendMessage(result).queue();
         }
     }
@@ -50,9 +50,13 @@ public abstract class MessageListener extends ListenerAdapter {
             return processingContext.getMessages(List.of(ProcessingContext.MessageType.ERROR))
                     .getFirst().message();
         } else {
-            return processingContext.getMessages(List.of(ProcessingContext.MessageType.INFO_RESULT, ProcessingContext.MessageType.SUCCESS_RESULT))
-                    .getFirst().message();
+            List<ProcessingContext.Message> messages = processingContext.getMessages(List.of(ProcessingContext.MessageType.INFO_RESULT, ProcessingContext.MessageType.SUCCESS_RESULT));
+            if (!messages.isEmpty()) {
+                return messages.getFirst().message();
+            }
         }
+
+        return null;
     }
 
     private static EmbedBuilder processRequestResultVerbose(ProcessingContext processingContext) {

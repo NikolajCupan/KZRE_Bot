@@ -32,11 +32,11 @@ public class Quote extends ActionHandler {
         );
         ActionHandler.ACTION_MODIFIERS.put(
                 Quote.ActionModifier.ORDER,
-                new Modifier<>(Quote.OrderArgument.class, Quote.OrderArgument.NEWEST, false, false, false, false, null, null)
+                new Modifier<>(Quote.OrderArgument.class, Quote.OrderArgument.RANDOM, false, false, false, false, null, null)
         );
         ActionHandler.ACTION_MODIFIERS.put(
                 Quote.ActionModifier.COUNT,
-                new Modifier<>(Quote.CountArgument.class, 5L, false, false, true, false, 1L, Long.MAX_VALUE)
+                new Modifier<>(Quote.CountArgument.class, 1L, false, false, true, false, 1L, Long.MAX_VALUE)
         );
         ActionHandler.ACTION_MODIFIERS.put(
                 Quote.ActionModifier.VALUE,
@@ -105,7 +105,7 @@ public class Quote extends ActionHandler {
         Quote.OrderArgument chatOrder = chatCommand.getFirstArgumentAsEnum(Quote.ActionModifier.ORDER, Quote.OrderArgument.class, true, processingContext);
         ProcessingContext dummy = new ProcessingContext();
         Set<String> chatTags = chatCommand.getArguments(Quote.ActionModifier.TAG, true, true, dummy).stream()
-                .map(argument -> argument.getTrimmedUsedValue(processingContext))
+                .map(argument -> argument.getTrimmedNormalizedLowercaseUsedValue(processingContext, "tag"))
                 .collect(Collectors.toSet());
         long resultsCount = Quote.getCountModifierArgument(chatCommand, processingContext);
 
@@ -199,12 +199,12 @@ public class Quote extends ActionHandler {
 
     private void handleNewQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         String chatNewQuote = chatCommand.getFirstArgument(Quote.ActionModifier.VALUE, false, true, processingContext)
-                .getTrimmedUsedValue(processingContext);
+                .getTrimmedUsedValue(processingContext, "new quote");
         Check.isNotBlank(chatNewQuote, true, "New quote", null);
         Check.isInRange(chatNewQuote.length(), 1, Constants.QUOTE_MAX_LENGTH, true, "Quote length", null);
 
         Set<String> allTags = chatCommand.getArguments(Quote.ActionModifier.TAG, false, true, processingContext).stream()
-                .map(argument -> argument.getTrimmedUsedValue(processingContext))
+                .map(argument -> argument.getTrimmedNormalizedLowercaseUsedValue(processingContext, "tag"))
                 .collect(Collectors.toSet());
 
         Session session = Main.DATABASE_SESSION_FACTORY.openSession();
@@ -212,7 +212,7 @@ public class Quote extends ActionHandler {
 
         try {
             Check.isBooleanFalse(
-                    QuoteDto.quoteExists(chatNewQuote, event.getGuild().getId(), session), true, "Quote " + chatNewQuote, "already exists"
+                    QuoteDto.quoteExists(chatNewQuote, event.getGuild().getId(), session), true, "Quote:\n\"" + chatNewQuote + '\"', "\nalready exists"
             );
 
             List<String> nonExistentTags = TagDto.filterOutExistingTags(allTags, event.getGuild().getId(), session);
@@ -222,7 +222,7 @@ public class Quote extends ActionHandler {
             QuoteDto newQuote = new QuoteDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewQuote, tagDtos);
             List<QuoteDto.QuoteDistance> similarQuotes = QuoteDto.findSimilarQuotes(chatNewQuote, event.getGuild().getId(), session);
 
-            Quote.tryToPersistEntity(newQuote, similarQuotes, session, event, chatCommand, processingContext);
+            Quote.tryToPersistEntity(newQuote, similarQuotes, false, 2, session, event, chatCommand, processingContext);
         } finally {
             transaction.commit();
             session.close();
@@ -231,7 +231,7 @@ public class Quote extends ActionHandler {
 
     private void handleNewTag(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         String chatNewTag = chatCommand.getFirstArgument(Quote.ActionModifier.VALUE, false, true, processingContext)
-                .getTrimmedNormalizedLowercaseUsedValue(processingContext);
+                .getTrimmedNormalizedLowercaseUsedValue(processingContext, "new tag");
         Check.isNotBlank(chatNewTag, true, "New tag", null);
         Check.isInRange(chatNewTag.length(), 1, Constants.TAG_MAX_LENGTH, true, "Tag length", null);
 
@@ -246,7 +246,7 @@ public class Quote extends ActionHandler {
             TagDto newTag = new TagDto(event.getAuthor().getId(), event.getGuild().getId(), chatNewTag);
             List<TagDto.TagDistance> similarTags = TagDto.findSimilarTags(chatNewTag, event.getGuild().getId(), session);
 
-            Quote.tryToPersistEntity(newTag, similarTags, session, event, chatCommand, processingContext);
+            Quote.tryToPersistEntity(newTag, similarTags, true, 5, session, event, chatCommand, processingContext);
         } finally {
             transaction.commit();
             session.close();
@@ -254,7 +254,8 @@ public class Quote extends ActionHandler {
     }
 
     private static<T extends Persistable, U extends DtoWithDistance> void tryToPersistEntity(
-            T persistable, List<U> similarEntities, Session session, MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext
+            T persistable, List<U> similarEntities, boolean compactWarningMessage, int maxDisplayedSimilarEntities,
+            Session session, MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext
     ) {
         boolean forceSwitchPresent = chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.FORCE);
 
@@ -263,7 +264,7 @@ public class Quote extends ActionHandler {
                     event, persistable, Constants.CONFIRMATION_ATTEMPTS
             );
 
-            String message = Quote.getSimilarEntitiesWarningMessage(similarEntities, timeToConfirmSeconds, 5);
+            String message = Quote.getSimilarEntitiesWarningMessage(similarEntities, timeToConfirmSeconds, maxDisplayedSimilarEntities, compactWarningMessage);
             processingContext.addMessages(message, ProcessingContext.MessageType.INFO_RESULT);
         } else {
             persistable.persist(processingContext, session);
@@ -289,8 +290,7 @@ public class Quote extends ActionHandler {
     }
 
     private static<T extends DtoWithDistance> String getSimilarEntitiesWarningMessage(
-            List<T> similarEntities, int timeToConfirmSeconds, int maxDisplayedSimilarEntities
-    ) {
+            List<T> similarEntities, int timeToConfirmSeconds, int maxDisplayedSimilarEntities, boolean compact) {
         List<T> sortedSimilarEntities = similarEntities.stream()
                 .sorted(Comparator.comparing(DtoWithDistance::getDistance))
                 .limit(maxDisplayedSimilarEntities)
@@ -298,10 +298,15 @@ public class Quote extends ActionHandler {
 
         String entityName = similarEntities.getFirst().getName();
         StringBuilder stringBuilder = new StringBuilder();
-        sortedSimilarEntities.stream().limit(maxDisplayedSimilarEntities).forEach(dtoWithDistance ->
-                stringBuilder.append("Similarity: ").append(Helper.formatDecimalNumber(100 - dtoWithDistance.getDistance() * 100, 2))
-                        .append(" %, ").append(entityName).append(": ").append(dtoWithDistance.getValue()).append("\n")
-        );
+        sortedSimilarEntities.stream().limit(maxDisplayedSimilarEntities).forEach(dtoWithDistance -> {
+            stringBuilder.append("Similarity: ").append(Helper.formatDecimalNumber(100 - dtoWithDistance.getDistance() * 100, 2))
+                    .append(" %, ").append(entityName).append(":");
+            if (compact) {
+                stringBuilder.append(" \"").append(dtoWithDistance.getValue()).append("\"\n");
+            } else {
+                stringBuilder.append("\n\"").append(dtoWithDistance.getValue()).append("\"\n\n");
+            }
+        });
 
         if (similarEntities.size() == 1) {
             return MessageFormat.format("Similar {0} detected, confirm action in {1} seconds by replying \"{2}\" or \"{3}\":\n{4}",

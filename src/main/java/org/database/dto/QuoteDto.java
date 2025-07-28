@@ -167,7 +167,7 @@ public class QuoteDto implements Persistable {
         String tagsMessage = "with " + (this.tagDtos.size() > 1 ? "tags " : "tag ") + stringifiedTags;
 
         processingContext.addMessages(
-                MessageFormat.format("New quote \"{0}\" {1} was successfully created", this.quote, tagsMessage),
+                MessageFormat.format("New quote:\n\"{0}\"\n{1} was successfully created", this.quote, tagsMessage),
                 ProcessingContext.MessageType.SUCCESS_RESULT
         );
     }

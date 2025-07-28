@@ -160,14 +160,14 @@ public class ChatCommand {
         }
 
         int splitIndex = content.indexOf(' ');
-        String firstToken = (splitIndex == -1) ? content : content.substring(1, splitIndex);
+        String firstToken = (splitIndex == -1) ? content.substring(1) : content.substring(1, splitIndex);
 
         return registeredActionHandlers.containsKey(firstToken.toUpperCase());
     }
 
     private static ActionHandler parseAction(String content, Map<String, ActionHandler> registeredActionHandlers) {
         int splitIndex = content.indexOf(' ');
-        String firstToken = (splitIndex == -1) ? content : content.substring(1, splitIndex);
+        String firstToken = (splitIndex == -1) ? content.substring(1) : content.substring(1, splitIndex);
         String firstTokenAction = firstToken.toUpperCase();
 
         return registeredActionHandlers.get(firstTokenAction);
@@ -357,7 +357,7 @@ public class ChatCommand {
 
             if (ChatCommand.MODIFIER_PREFIX.equals(String.valueOf(c))) {
                 char previous = content.charAt(i - 1);
-                if (previous == ' ' && !inSentence) {
+                if ((previous == ' ' || previous == '\n') && !inSentence) {
                     indexedMessage.addCharacter(c, IndexedMessage.TypedCharacter.CharacterType.MODIFIER);
                 } else {
                     indexedMessage.addCharacter(c, IndexedMessage.TypedCharacter.CharacterType.LITERAL);
