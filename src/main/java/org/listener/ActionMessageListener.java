@@ -1,7 +1,10 @@
-package org.action;
+package org.listener;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import org.MessageListener;
+import org.action.Action;
+import org.action.ActionHandler;
+import org.action.Index;
+import org.action.Quote;
 import org.parsing.ChatCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

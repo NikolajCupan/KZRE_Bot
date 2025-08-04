@@ -11,7 +11,7 @@ import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.entities.emoji.CustomEmoji;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.Main;
-import org.MessageListener;
+import org.listener.MessageListener;
 import org.database.dto.*;
 import org.exception.CustomException;
 import org.hibernate.Session;

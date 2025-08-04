@@ -1,9 +1,8 @@
-package org.action;
+package org.listener;
 
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.Main;
-import org.MessageListener;
 import org.database.Persistable;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
@@ -131,7 +130,7 @@ public class ConfirmationMessageListener extends MessageListener {
 
         if (this.attemptsRemaining != null && this.attemptsRemaining <= 0 && chatConfirmation.getStatus() == ChatConfirmation.Status.INVALID) {
             processingContext.addMessages(
-                    "Too many invalid confirmation values provided, the action has been canceled",
+                    "Too many invalid confirmation values provided, the operation has been canceled",
                     ProcessingContext.MessageType.ERROR
             );
             this.handleDecline(processingContext);
