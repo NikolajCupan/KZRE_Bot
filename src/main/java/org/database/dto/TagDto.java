@@ -26,7 +26,7 @@ public class TagDto implements Persistable {
     public static final String TAG_TABLE_NAME = "tag";
 
     public static final String ID_TAG_COLUMN_NAME = "id_tag";
-    public static final String SNOWFLAKE_AUTHOR_COLUMN_NAME = "snowflake_author";
+    public static final String SNOWFLAKE_TAG_AUTHOR_COLUMN_NAME = "snowflake_tag_author";
     public static final String SNOWFLAKE_GUILD_COLUMN_NAME = "snowflake_guild";
     public static final String TAG_COLUMN_NAME = "tag";
     public static final String DATE_CREATED_COLUMN_NAME = "date_created";
@@ -37,8 +37,8 @@ public class TagDto implements Persistable {
     @Column(name = TagDto.ID_TAG_COLUMN_NAME, unique = true, nullable = false)
     private long idTag;
 
-    @Column(name = TagDto.SNOWFLAKE_AUTHOR_COLUMN_NAME, nullable = false)
-    private String snowflakeAuthor;
+    @Column(name = TagDto.SNOWFLAKE_TAG_AUTHOR_COLUMN_NAME, nullable = false)
+    private String snowflakeTagAuthor;
 
     @Column(name = TagDto.SNOWFLAKE_GUILD_COLUMN_NAME, nullable = false)
     private String snowflakeGuild;
@@ -54,8 +54,8 @@ public class TagDto implements Persistable {
 
     public TagDto() {}
 
-    public TagDto(String snowflakeAuthor, String snowflakeGuild, String tag) {
-        this.snowflakeAuthor = snowflakeAuthor;
+    public TagDto(String snowflakeTagAuthor, String snowflakeGuild, String tag) {
+        this.snowflakeTagAuthor = snowflakeTagAuthor;
         this.snowflakeGuild = snowflakeGuild;
         this.tag = tag;
     }

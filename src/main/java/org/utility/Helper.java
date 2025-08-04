@@ -2,7 +2,13 @@ package org.utility;
 
 import net.dv8tion.jda.api.entities.MessageReaction;
 import net.dv8tion.jda.api.entities.emoji.CustomEmoji;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import org.Main;
+import org.database.dto.GuildDto;
+import org.database.dto.UserDto;
 import org.exception.InvalidActionArgumentException;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
 
 import java.math.RoundingMode;
 import java.text.MessageFormat;
@@ -84,6 +90,19 @@ public class Helper {
 
     public static boolean isGuildEmoji(MessageReaction reaction) {
         return reaction.getEmoji() instanceof CustomEmoji;
+    }
+
+    public static void refreshGuildAndUser(MessageReceivedEvent event) {
+        Session session = Main.DATABASE_SESSION_FACTORY.openSession();
+        Transaction transaction = session.beginTransaction();
+
+        try {
+            GuildDto.refreshGuild(event.getGuild().getId(), session);
+            UserDto.refreshUser(event.getAuthor().getId(), event.getAuthor().isBot(), session);
+        } finally {
+            transaction.commit();
+            session.close();
+        }
     }
 
     public enum EmptyEnum {}

@@ -1,4 +1,4 @@
-package org.listener;
+package org.action.util;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.action.Action;
@@ -16,13 +16,13 @@ import java.text.MessageFormat;
 import java.util.*;
 import java.util.List;
 
-public class ActionMessageListener extends MessageListener {
+public class ActionExecution extends ActionMessageListener {
     private static final Logger LOGGER;
 
     private static final Map<String, ActionHandler> REGISTERED_ACTION_HANDLERS;
 
     static {
-        LOGGER = LoggerFactory.getLogger(ActionMessageListener.class);
+        LOGGER = LoggerFactory.getLogger(ActionExecution.class);
 
         REGISTERED_ACTION_HANDLERS = Map.of(
                 Action.INDEX.toString().toUpperCase(), new Index(),
@@ -120,20 +120,20 @@ public class ActionMessageListener extends MessageListener {
 
     @Override
     public boolean processMessage(MessageReceivedEvent event, ProcessingContext processingContext) {
-        if (ConfirmationMessageListener.confirmationKeyExists(event.getChannel().getId(), event.getAuthor().getId())) {
+        if (ActionConfirmation.confirmationKeyExists(event.getChannel().getId(), event.getAuthor().getId())) {
             // waiting for confirmation
-            ActionMessageListener.LOGGER.info("Message ignored because there is a pending confirmation");
+            ActionExecution.LOGGER.info("Message ignored because there is a pending confirmation");
             return false;
         }
 
-        ChatCommand chatCommand = new ChatCommand(event.getMessage(), ActionMessageListener.REGISTERED_ACTION_HANDLERS, processingContext);
+        ChatCommand chatCommand = new ChatCommand(event.getMessage(), ActionExecution.REGISTERED_ACTION_HANDLERS, processingContext);
         ActionHandler actionHandler = chatCommand.getActionHandler();
         if (actionHandler == null || processingContext.hasMessageOfType(ProcessingContext.MessageType.PARSING_ERROR)) {
             return false;
         }
 
         String guildUserLockedChannel =
-                ConfirmationMessageListener.getGuildUserLockedChannel(event.getAuthor().getId(), event.getGuild().getId());
+                ActionConfirmation.getGuildUserLockedChannel(event.getAuthor().getId(), event.getGuild().getId());
         if (guildUserLockedChannel != null) {
             processingContext.addMessages(
                     MessageFormat.format("Please confirm the pending action in channel \"{0}\" before running another command", guildUserLockedChannel),
@@ -143,13 +143,13 @@ public class ActionMessageListener extends MessageListener {
         }
 
 
-        ActionMessageListener.LOGGER.info("Received action \"{}\"", event.getMessage().getContentRaw());
+        ActionExecution.LOGGER.info("Received action \"{}\"", event.getMessage().getContentRaw());
 
         actionHandler.executeAction(event, chatCommand, processingContext);
 
         boolean verboseSwitchPresent = chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.VERBOSE);
-        ActionMessageListener.warnIfUnusedModifiersOrArgumentsExist(chatCommand, processingContext);
-        ActionMessageListener.warnIfForceWasNotNeeded(chatCommand, processingContext);
+        ActionExecution.warnIfUnusedModifiersOrArgumentsExist(chatCommand, processingContext);
+        ActionExecution.warnIfForceWasNotNeeded(chatCommand, processingContext);
 
         return verboseSwitchPresent;
     }

@@ -4,7 +4,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.requests.GatewayIntent;
-import org.listener.ActionMessageListener;
+import org.action.util.ActionExecution;
 import org.apache.ibatis.jdbc.ScriptRunner;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -51,7 +51,7 @@ public class Main {
         Main.parseCommandLineArguments(args);
         Main.initializeDatabase();
 
-        Main.JDA_API.addEventListener(new ActionMessageListener());
+        Main.JDA_API.addEventListener(new ActionExecution());
     }
 
     private static void parseCommandLineArguments(String[] arguments) {

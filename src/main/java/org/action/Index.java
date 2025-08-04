@@ -11,7 +11,6 @@ import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.entities.emoji.CustomEmoji;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.Main;
-import org.listener.MessageListener;
 import org.database.dto.*;
 import org.exception.CustomException;
 import org.hibernate.Session;
@@ -21,6 +20,7 @@ import org.parsing.Modifier;
 import org.utility.Check;
 import org.utility.Helper;
 import org.utility.ProcessingContext;
+import org.utility.CommunicationStream;
 
 import java.util.*;
 
@@ -61,7 +61,7 @@ public class Index extends ActionHandler {
         MessageChannel sourceChannel = finishedIndexingJob.sourceChannel;
         String stringifiedChannels = Helper.stringifyCollection(finishedIndexingJob.indexedChannels, Index.IndexingJob.IndexedChannel::getChannelName, true);
 
-        MessageListener.returnResponse(sourceChannel, "Indexing finished for channels: " + stringifiedChannels);
+        CommunicationStream.returnResponse(sourceChannel, "Indexing finished for channels: " + stringifiedChannels);
     }
 
     private static EmojiDto retrieveEmojiDto(MessageReaction reaction, String snowflakeGuild, Session session) {
@@ -102,7 +102,7 @@ public class Index extends ActionHandler {
             EmojiDto emojiDto = Index.retrieveEmojiDto(reaction, message.getGuild().getId(), session);
 
             for (User user : users) {
-                UserDto.refreshUser(user.getId(), session);
+                UserDto.refreshUser(user.getId(), user.isBot(), session);
                 ReactionDto reactionDto = new ReactionDto(message.getId(), user.getId(), emojiDto.getIdEmoji());
                 session.persist(reactionDto);
             }
@@ -118,7 +118,7 @@ public class Index extends ActionHandler {
 
         try {
             for (Message message : channelMessages.messages) {
-                MessageDto messageDto = new MessageDto(message.getId(), channelMessages.messageChannel.getId(), message.getContentRaw());
+                MessageDto messageDto = new MessageDto(message.getId(), message.getAuthor().getId(), channelMessages.messageChannel.getId(), message.getContentRaw());
                 session.persist(messageDto);
                 session.flush();
 

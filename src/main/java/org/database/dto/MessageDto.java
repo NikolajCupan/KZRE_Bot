@@ -12,6 +12,7 @@ public class MessageDto {
     public static final String MESSAGE_TABLE_NAME = "message";
 
     public static final String SNOWFLAKE_MESSAGE_COLUMN_NAME = "snowflake_message";
+    public static final String SNOWFLAKE_MESSAGE_AUTHOR_COLUMN_NAME = "snowflake_message_author";
     public static final String SNOWFLAKE_CHANNEL_COLUMN_NAME = "snowflake_channel";
     public static final String MESSAGE_COLUMN_NAME = "message";
 
@@ -19,14 +20,18 @@ public class MessageDto {
     @Column(name = MessageDto.SNOWFLAKE_MESSAGE_COLUMN_NAME, unique = true, nullable = false)
     private String snowflakeMessage;
 
+    @Column(name = MessageDto.SNOWFLAKE_MESSAGE_AUTHOR_COLUMN_NAME, nullable = false)
+    private String snowflakeMessageAuthor;
+
     @Column(name = MessageDto.SNOWFLAKE_CHANNEL_COLUMN_NAME, nullable = false)
     private String snowflakeChannel;
 
     @Column(name = MessageDto.MESSAGE_COLUMN_NAME, nullable = false)
     private String message;
 
-    public MessageDto(String snowflakeMessage, String snowflakeChannel, String message) {
+    public MessageDto(String snowflakeMessage, String snowflakeMessageAuthor, String snowflakeChannel, String message) {
         this.snowflakeMessage = snowflakeMessage;
+        this.snowflakeMessageAuthor = snowflakeMessageAuthor;
         this.snowflakeChannel = snowflakeChannel;
         this.message = message;
     }

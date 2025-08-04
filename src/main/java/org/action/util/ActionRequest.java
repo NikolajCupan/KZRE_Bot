@@ -1,4 +1,4 @@
-package org.utility;
+package org.action.util;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -6,19 +6,19 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class Request {
-    private static final Map<Request.RequestKey, Lock> LOCKS;
+public class ActionRequest {
+    private static final Map<ActionRequest.RequestKey, Lock> LOCKS;
 
     static {
         LOCKS = Collections.synchronizedMap(new HashMap<>());
     }
 
-    private final Request.RequestKey key;
+    private final ActionRequest.RequestKey key;
     private final String guildId;
     private boolean lockAquired;
 
-    public Request(String channelId, String userId, String guildId) {
-        this.key = new Request.RequestKey(channelId, userId);
+    public ActionRequest(String channelId, String userId, String guildId) {
+        this.key = new ActionRequest.RequestKey(channelId, userId);
         this.guildId = guildId;
         this.lockAquired = false;
     }
@@ -28,7 +28,7 @@ public class Request {
             throw new IllegalStateException("Lock for this request was already aquired");
         }
 
-        Object lock = Request.LOCKS.computeIfAbsent(this.key, _ -> new Lock()).getLock();
+        Object lock = ActionRequest.LOCKS.computeIfAbsent(this.key, _ -> new Lock()).getLock();
         if (lock != null) {
             this.lockAquired = true;
             return lock;
@@ -42,7 +42,7 @@ public class Request {
             throw new IllegalStateException("Lock for this request was not aquired");
         }
 
-        Request.LOCKS.computeIfPresent(this.key, (_, lock) -> {
+        ActionRequest.LOCKS.computeIfPresent(this.key, (_, lock) -> {
             if (lock.returnLock() <= 0) {
                 return null;
             }
@@ -51,7 +51,7 @@ public class Request {
         });
     }
 
-    public Request.RequestKey getKey() {
+    public ActionRequest.RequestKey getKey() {
         return this.key;
     }
 
@@ -59,17 +59,17 @@ public class Request {
         return this.guildId;
     }
 
-    public static class PendingListenersRemovalsComparator implements Comparator<Request> {
+    public static class PendingListenersRemovalsComparator implements Comparator<ActionRequest> {
         @Override
-        public int compare(Request lhs, Request rhs) {
+        public int compare(ActionRequest lhs, ActionRequest rhs) {
             int comparison = lhs.getKey().channelId().compareTo(rhs.getKey().channelId());
             return comparison != 0 ? comparison : lhs.getKey().userId().compareTo(rhs.getKey().userId());
         }
     }
 
-    public static class GuildUserLockComparator implements Comparator<Request> {
+    public static class GuildUserLockComparator implements Comparator<ActionRequest> {
         @Override
-        public int compare(Request lhs, Request rhs) {
+        public int compare(ActionRequest lhs, ActionRequest rhs) {
             int comparison = lhs.getKey().userId().compareTo(rhs.getKey().userId());
             return comparison != 0 ? comparison : lhs.getGuildId().compareTo(rhs.getGuildId());
         }

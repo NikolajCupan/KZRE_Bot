@@ -11,7 +11,7 @@ import org.exception.CustomException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.query.NativeQuery;
-import org.listener.ConfirmationMessageListener;
+import org.action.util.ActionConfirmation;
 import org.parsing.ChatCommand;
 import org.parsing.ChatConfirmation;
 import org.parsing.Modifier;
@@ -266,7 +266,7 @@ public class Quote extends ActionHandler {
         boolean forceSwitchPresent = chatCommand.isSwitchModifierPresent(ActionHandler.GlobalActionModifier.FORCE);
 
         if (!similarEntities.isEmpty() && !forceSwitchPresent) {
-            int timeToConfirmSeconds = ConfirmationMessageListener.addConfirmationMessageListener(
+            int timeToConfirmSeconds = ActionConfirmation.addConfirmationMessageListener(
                     event, persistable, Constants.CONFIRMATION_ATTEMPTS
             );
 

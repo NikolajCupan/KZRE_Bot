@@ -1,4 +1,4 @@
-package org.listener;
+package org.action.util;
 
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -10,31 +10,31 @@ import org.parsing.ChatConfirmation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.utility.ProcessingContext;
-import org.utility.Request;
+import org.utility.CommunicationStream;
 
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.*;
 
-public class ConfirmationMessageListener extends MessageListener {
+public class ActionConfirmation extends ActionMessageListener {
     private static final Logger LOGGER;
 
     private static final int CONFIRMATION_TIMEOUT_S;
-    private static final Map<Request, ScheduledFuture<?>> PENDING_LISTENERS_REMOVALS;
-    private static final Map<Request, String> GUILD_USER_LOCKS;
+    private static final Map<ActionRequest, ScheduledFuture<?>> PENDING_LISTENERS_REMOVALS;
+    private static final Map<ActionRequest, String> GUILD_USER_LOCKS;
     private static final ScheduledExecutorService EXECUTOR_SERVICE;
 
     static {
-        LOGGER = LoggerFactory.getLogger(ConfirmationMessageListener.class);
+        LOGGER = LoggerFactory.getLogger(ActionConfirmation.class);
 
         CONFIRMATION_TIMEOUT_S = 20;
-        PENDING_LISTENERS_REMOVALS = Collections.synchronizedMap(new TreeMap<>(new Request.PendingListenersRemovalsComparator()));
-        GUILD_USER_LOCKS = Collections.synchronizedMap(new TreeMap<>(new Request.GuildUserLockComparator()));
+        PENDING_LISTENERS_REMOVALS = Collections.synchronizedMap(new TreeMap<>(new ActionRequest.PendingListenersRemovalsComparator()));
+        GUILD_USER_LOCKS = Collections.synchronizedMap(new TreeMap<>(new ActionRequest.GuildUserLockComparator()));
 
         ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
         executor.setRemoveOnCancelPolicy(true);
         EXECUTOR_SERVICE = Executors.unconfigurableScheduledExecutorService(executor);
-        Runtime.getRuntime().addShutdownHook(new Thread(ConfirmationMessageListener.EXECUTOR_SERVICE::shutdownNow));
+        Runtime.getRuntime().addShutdownHook(new Thread(ActionConfirmation.EXECUTOR_SERVICE::shutdownNow));
     }
 
     private final String channelId;
@@ -43,7 +43,7 @@ public class ConfirmationMessageListener extends MessageListener {
     private final Persistable objectToStore;
     private Integer attemptsRemaining;
 
-    public ConfirmationMessageListener(String channelId, String userId, String guildId, Persistable objectToStore, Integer attemptsRemaining) {
+    public ActionConfirmation(String channelId, String userId, String guildId, Persistable objectToStore, Integer attemptsRemaining) {
         this.channelId = channelId;
         this.userId = userId;
         this.guildId = guildId;
@@ -51,26 +51,26 @@ public class ConfirmationMessageListener extends MessageListener {
         this.attemptsRemaining = attemptsRemaining;
     }
 
-    public static void removeConfirmationMessageListener(ConfirmationMessageListener messageListener) {
-        Request request = new Request(messageListener.getChannelId(), messageListener.getUserId(), messageListener.getGuildId());
+    public static void removeConfirmationMessageListener(ActionConfirmation messageListener) {
+        ActionRequest actionRequest = new ActionRequest(messageListener.getChannelId(), messageListener.getUserId(), messageListener.getGuildId());
 
         // noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (messageListener) {
-            if (!ConfirmationMessageListener.PENDING_LISTENERS_REMOVALS.containsKey(request)) {
+            if (!ActionConfirmation.PENDING_LISTENERS_REMOVALS.containsKey(actionRequest)) {
                 // listener was already removed
                 return;
             }
 
-            assert ConfirmationMessageListener.GUILD_USER_LOCKS.containsKey(request);
-            ConfirmationMessageListener.GUILD_USER_LOCKS.remove(request);
+            assert ActionConfirmation.GUILD_USER_LOCKS.containsKey(actionRequest);
+            ActionConfirmation.GUILD_USER_LOCKS.remove(actionRequest);
 
-            ScheduledFuture<?> scheduledFuture = ConfirmationMessageListener.PENDING_LISTENERS_REMOVALS.remove(request);
+            ScheduledFuture<?> scheduledFuture = ActionConfirmation.PENDING_LISTENERS_REMOVALS.remove(actionRequest);
             scheduledFuture.cancel(true);
             Main.JDA_API.removeEventListener(messageListener);
         }
     }
 
-    private static void removeConfirmationMessageListenerAfterTimeout(ConfirmationMessageListener messageListener) {
+    private static void removeConfirmationMessageListenerAfterTimeout(ActionConfirmation messageListener) {
         // noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (messageListener) {
             if (Thread.interrupted()) {
@@ -78,8 +78,8 @@ public class ConfirmationMessageListener extends MessageListener {
                 return;
             }
 
-            ConfirmationMessageListener.removeConfirmationMessageListener(messageListener);
-            MessageListener.returnResponse(
+            ActionConfirmation.removeConfirmationMessageListener(messageListener);
+            CommunicationStream.returnResponse(
                     Main.JDA_API.getChannelById(MessageChannel.class, messageListener.getChannelId()),
                     "Confirmation timed out"
             );
@@ -87,30 +87,30 @@ public class ConfirmationMessageListener extends MessageListener {
     }
 
     public static int addConfirmationMessageListener(MessageReceivedEvent event, Persistable objectToStore, Integer attemptsRemaining) {
-        Request request = new Request(event.getChannel().getId(), event.getAuthor().getId(), event.getGuild().getId());
-        assert !ConfirmationMessageListener.PENDING_LISTENERS_REMOVALS.containsKey(request);
-        assert !ConfirmationMessageListener.GUILD_USER_LOCKS.containsKey(request);
+        ActionRequest actionRequest = new ActionRequest(event.getChannel().getId(), event.getAuthor().getId(), event.getGuild().getId());
+        assert !ActionConfirmation.PENDING_LISTENERS_REMOVALS.containsKey(actionRequest);
+        assert !ActionConfirmation.GUILD_USER_LOCKS.containsKey(actionRequest);
 
-        ConfirmationMessageListener confirmationMessageListener =
-                new ConfirmationMessageListener(event.getChannel().getId(), event.getAuthor().getId(), event.getGuild().getId(), objectToStore, attemptsRemaining);
+        ActionConfirmation actionConfirmationMessageListener =
+                new ActionConfirmation(event.getChannel().getId(), event.getAuthor().getId(), event.getGuild().getId(), objectToStore, attemptsRemaining);
 
-        Main.JDA_API.addEventListener(confirmationMessageListener);
-        ScheduledFuture<?> scheduledFuture = ConfirmationMessageListener.EXECUTOR_SERVICE.schedule(
-                () -> ConfirmationMessageListener.removeConfirmationMessageListenerAfterTimeout(confirmationMessageListener),
-                ConfirmationMessageListener.CONFIRMATION_TIMEOUT_S, TimeUnit.SECONDS
+        Main.JDA_API.addEventListener(actionConfirmationMessageListener);
+        ScheduledFuture<?> scheduledFuture = ActionConfirmation.EXECUTOR_SERVICE.schedule(
+                () -> ActionConfirmation.removeConfirmationMessageListenerAfterTimeout(actionConfirmationMessageListener),
+                ActionConfirmation.CONFIRMATION_TIMEOUT_S, TimeUnit.SECONDS
         );
-        ConfirmationMessageListener.PENDING_LISTENERS_REMOVALS.put(request, scheduledFuture);
-        ConfirmationMessageListener.GUILD_USER_LOCKS.put(request, event.getChannel().getName());
+        ActionConfirmation.PENDING_LISTENERS_REMOVALS.put(actionRequest, scheduledFuture);
+        ActionConfirmation.GUILD_USER_LOCKS.put(actionRequest, event.getChannel().getName());
 
-        return ConfirmationMessageListener.CONFIRMATION_TIMEOUT_S;
+        return ActionConfirmation.CONFIRMATION_TIMEOUT_S;
     }
 
     public static boolean confirmationKeyExists(String channelId, String userId) {
-        return ConfirmationMessageListener.PENDING_LISTENERS_REMOVALS.containsKey(new Request(channelId, userId, null));
+        return ActionConfirmation.PENDING_LISTENERS_REMOVALS.containsKey(new ActionRequest(channelId, userId, null));
     }
 
     public static String getGuildUserLockedChannel(String userId, String channelId) {
-        return ConfirmationMessageListener.GUILD_USER_LOCKS.get(new Request(null, userId, channelId));
+        return ActionConfirmation.GUILD_USER_LOCKS.get(new ActionRequest(null, userId, channelId));
     }
 
     @Override
@@ -121,7 +121,7 @@ public class ConfirmationMessageListener extends MessageListener {
         }
 
 
-        ConfirmationMessageListener.LOGGER.info("Received message \"{}\"", event.getMessage().getContentRaw());
+        ActionConfirmation.LOGGER.info("Received message \"{}\"", event.getMessage().getContentRaw());
 
         ChatConfirmation chatConfirmation = new ChatConfirmation(event.getMessage());
         if (this.attemptsRemaining != null) {
@@ -152,7 +152,7 @@ public class ConfirmationMessageListener extends MessageListener {
         try {
             this.objectToStore.persist(processingContext, session);
         } finally {
-            ConfirmationMessageListener.removeConfirmationMessageListener(this);
+            ActionConfirmation.removeConfirmationMessageListener(this);
             transaction.commit();
             session.close();
         }
@@ -160,7 +160,7 @@ public class ConfirmationMessageListener extends MessageListener {
 
     private void handleDecline(ProcessingContext processingContext) {
         this.objectToStore.cancelPersist(processingContext);
-        ConfirmationMessageListener.removeConfirmationMessageListener(this);
+        ActionConfirmation.removeConfirmationMessageListener(this);
     }
 
     private void handleInvalidOption(ProcessingContext processingContext) {

@@ -9,20 +9,25 @@ public class UserDto {
     public static final String USER_TABLE_NAME = "user";
 
     public static final String SNOWFLAKE_USER_COLUMN_NAME = "snowflake_user";
+    public static final String BOT_COLUMN_NAME = "bot";
 
     @Id
     @Column(name = UserDto.SNOWFLAKE_USER_COLUMN_NAME, unique = true, nullable = false)
     private String snowflakeUser;
 
+    @Column(name = UserDto.BOT_COLUMN_NAME, nullable = false)
+    public boolean bot;
+
     public UserDto() {}
 
-    public UserDto(String snowflakeUser) {
+    public UserDto(String snowflakeUser, boolean bot) {
         this.snowflakeUser = snowflakeUser;
+        this.bot = bot;
     }
 
-    public static void refreshUser(String snowflakeUser, Session session) {
+    public static void refreshUser(String snowflakeUser, boolean isBot, Session session) {
         if (!UserDto.userExists(snowflakeUser, session)) {
-            UserDto newUser = new UserDto(snowflakeUser);
+            UserDto newUser = new UserDto(snowflakeUser, isBot);
             session.persist(newUser);
         }
     }

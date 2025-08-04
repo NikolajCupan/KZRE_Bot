@@ -33,7 +33,7 @@ public class QuoteDto implements Persistable {
     public static final String QUOTE_TABLE_NAME = "quote";
 
     public static final String ID_QUOTE_COLUMN_NAME = "id_quote";
-    public static final String SNOWFLAKE_AUTHOR_COLUMN_NAME = "snowflake_author";
+    public static final String SNOWFLAKE_QUOTE_AUTHOR_COLUMN_NAME = "snowflake_quote_author";
     public static final String SNOWFLAKE_GUILD_COLUMN_NAME = "snowflake_guild";
     public static final String QUOTE_COLUMN_NAME = "quote";
     public static final String QUOTE_HASH_COLUMN_NAME = "quote_hash";
@@ -48,8 +48,8 @@ public class QuoteDto implements Persistable {
     @Column(name = QuoteDto.ID_QUOTE_COLUMN_NAME, unique = true, nullable = false)
     private long idQuote;
 
-    @Column(name = QuoteDto.SNOWFLAKE_AUTHOR_COLUMN_NAME, nullable = false)
-    private String snowflakeAuthor;
+    @Column(name = QuoteDto.SNOWFLAKE_QUOTE_AUTHOR_COLUMN_NAME, nullable = false)
+    private String snowflakeQuoteAuthor;
 
     @Column(name = QuoteDto.SNOWFLAKE_GUILD_COLUMN_NAME, nullable = false)
     private String snowflakeGuild;
@@ -74,8 +74,8 @@ public class QuoteDto implements Persistable {
 
     public QuoteDto() {}
 
-    public QuoteDto(String snowflakeAuthor, String snowflakeGuild, String quote, List<TagDto> tagDtos) {
-        this.snowflakeAuthor = snowflakeAuthor;
+    public QuoteDto(String snowflakeQuoteAuthor, String snowflakeGuild, String quote, List<TagDto> tagDtos) {
+        this.snowflakeQuoteAuthor = snowflakeQuoteAuthor;
         this.snowflakeGuild = snowflakeGuild;
         this.quote = quote;
         this.quoteSimhash = QuoteDto.generateSimhash(quote);
