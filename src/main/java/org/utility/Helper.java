@@ -1,6 +1,11 @@
 package org.utility;
 
+import net.dv8tion.jda.api.entities.MessageReaction;
+import net.dv8tion.jda.api.entities.emoji.CustomEmoji;
+import org.exception.InvalidActionArgumentException;
+
 import java.math.RoundingMode;
+import java.text.MessageFormat;
 import java.text.Normalizer;
 import java.text.NumberFormat;
 import java.util.Collection;
@@ -65,6 +70,20 @@ public class Helper {
         stringBuilder.append(']');
 
         return stringBuilder.toString();
+    }
+
+    public static String extractIdFromChannelMention(String value) {
+        if (value.length() <= 3 || !value.startsWith("<#") || !value.endsWith(">")) {
+            throw new InvalidActionArgumentException(
+                    MessageFormat.format("Invalid channel \"{0}\" provided", value)
+            );
+        }
+
+        return value.substring(2, value.length() - 1);
+    }
+
+    public static boolean isGuildEmoji(MessageReaction reaction) {
+        return reaction.getEmoji() instanceof CustomEmoji;
     }
 
     public enum EmptyEnum {}

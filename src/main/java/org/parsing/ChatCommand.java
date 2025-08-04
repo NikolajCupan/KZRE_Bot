@@ -33,8 +33,9 @@ public class ChatCommand {
 
         this.actionHandler = ChatCommand.parseAction(message.getContentRaw(), registeredActionHandlers);
         int escapeCharacterIndex = ChatCommand.parseEscapeCharacter(message.getContentRaw(), processingContext);
-        ChatCommand.processMentions(message, processingContext);
-        IndexedMessage indexedMessage = ChatCommand.parseMessage(message.getContentDisplay(), escapeCharacterIndex, processingContext);
+        ChatCommand.processMentions(message, processingContext, this.actionHandler.mentionsAllowed());
+        String content = this.actionHandler.mentionsAllowed() ? message.getContentRaw() : message.getContentDisplay();
+        IndexedMessage indexedMessage = ChatCommand.parseMessage(content, escapeCharacterIndex, processingContext);
 
         if (processingContext.hasMessageOfType(ProcessingContext.MessageType.PARSING_ERROR)) {
             return;
@@ -225,7 +226,7 @@ public class ChatCommand {
         return secondSpaceIndex + 1;
     }
 
-    private static void processMentions(Message message, ProcessingContext processingContext) {
+    private static void processMentions(Message message, ProcessingContext processingContext, boolean mentionsAllowed) {
         if (processingContext.hasMessageOfType(ProcessingContext.MessageType.PARSING_ERROR)) {
             return;
         }
@@ -246,7 +247,8 @@ public class ChatCommand {
             return;
         }
 
-        if (users.isEmpty() && members.isEmpty() && channels.isEmpty() && roles.isEmpty() && emojis.isEmpty()) {
+        if ((users.isEmpty() && members.isEmpty() && channels.isEmpty() && roles.isEmpty() && emojis.isEmpty())
+                || mentionsAllowed) {
             return;
         }
 
@@ -450,8 +452,8 @@ public class ChatCommand {
     public<T extends Enum<T>> TypedValue getFirstArgument(
             T modifier, boolean allowNullArgument, boolean setUsed, ProcessingContext processingContext
     ) {
-        // Ignore invalid resolution warnings and check first argument only
-        ProcessingContext dummy = new ProcessingContext();
+        // ignore invalid resolution warnings and check first argument only
+        final ProcessingContext dummy = new ProcessingContext();
         List<TypedValue> arguments = this.getArguments(modifier, allowNullArgument, false, dummy);
         ChatCommand.warnIfResolutionIsNotValidArgument(modifier, arguments.getFirst(), processingContext);
 

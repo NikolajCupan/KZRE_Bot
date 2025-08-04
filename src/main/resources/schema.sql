@@ -53,3 +53,43 @@ CREATE TABLE IF NOT EXISTS quote_tag (
     CONSTRAINT fk_quote_tag_tag FOREIGN KEY (id_tag) REFERENCES tag (id_tag),
     CONSTRAINT fk_quote_tag_quote1 FOREIGN KEY (id_quote) REFERENCES quote (id_quote)
 );
+
+CREATE TABLE IF NOT EXISTS message (
+	snowflake_message BIGINT NOT NULL,
+	snowflake_channel BIGINT NOT NULL,
+	message TEXT NOT NULL,
+	PRIMARY KEY (snowflake_message),
+	UNIQUE INDEX snowflake_messages_UNIQUE (snowflake_message ASC) VISIBLE
+);
+
+CREATE TABLE IF NOT EXISTS emoji (
+	id_emoji BIGINT NOT NULL AUTO_INCREMENT,
+	emoji VARCHAR(100) NOT NULL,
+	PRIMARY KEY (id_emoji),
+	UNIQUE INDEX id_emoji_UNIQUE (id_emoji ASC) VISIBLE
+);
+
+CREATE TABLE IF NOT EXISTS reaction (
+	snowflake_message BIGINT NOT NULL,
+	snowflake_author BIGINT NOT NULL,
+	id_emoji BIGINT NOT NULL,
+	INDEX fk_reaction_message1_idx (snowflake_message ASC) VISIBLE,
+	INDEX fk_reaction_user1_idx (snowflake_author ASC) VISIBLE,
+	PRIMARY KEY (id_emoji, snowflake_message, snowflake_author),
+	CONSTRAINT fk_reaction_message1 FOREIGN KEY (snowflake_message) REFERENCES message (snowflake_message),
+	CONSTRAINT fk_reaction_user1 FOREIGN KEY (snowflake_author) REFERENCES user (snowflake_user),
+	CONSTRAINT fk_reaction_emoji1 FOREIGN KEY (id_emoji) REFERENCES emoji (id_emoji)
+);
+
+CREATE TABLE IF NOT EXISTS guild_emoji (
+	id_emoji BIGINT NOT NULL,
+	snowflake_guild BIGINT NOT NULL,
+	snowflake_emoji BIGINT NOT NULL,
+	animated TINYINT(1) NOT NULL DEFAULT 0,
+	UNIQUE INDEX snowflake_emoji_UNIQUE (snowflake_emoji ASC) VISIBLE,
+	INDEX fk_guild_emoji_emoji1_idx (id_emoji ASC) VISIBLE,
+	INDEX fk_guild_emoji_guild1_idx (snowflake_guild ASC) VISIBLE,
+	PRIMARY KEY (id_emoji, snowflake_guild),
+	CONSTRAINT fk_guild_emoji_emoji1 FOREIGN KEY (id_emoji) REFERENCES emoji (id_emoji),
+	CONSTRAINT fk_guild_emoji_guild1 FOREIGN KEY (snowflake_guild) REFERENCES guild (snowflake_guild)
+);

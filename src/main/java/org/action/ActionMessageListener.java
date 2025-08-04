@@ -21,8 +21,10 @@ public class ActionMessageListener extends MessageListener {
     static {
         LOGGER = LoggerFactory.getLogger(ActionMessageListener.class);
 
-        REGISTERED_ACTION_HANDLERS = new HashMap<>();
-        ActionMessageListener.REGISTERED_ACTION_HANDLERS.put(Action.QUOTE.toString().toUpperCase(), new Quote());
+        REGISTERED_ACTION_HANDLERS = Map.of(
+                Action.INDEX.toString().toUpperCase(), new Index(),
+                Action.QUOTE.toString().toUpperCase(), new Quote()
+        );
     }
 
     private static void warnIfUnusedModifiersOrArgumentsExist(ChatCommand chatCommand, ProcessingContext processingContext) {
@@ -43,11 +45,11 @@ public class ActionMessageListener extends MessageListener {
             boolean modifierIsSwitch = arguments.isEmpty() || arguments.getFirst().getType() == TypedValue.Type.SWITCH;
 
             if (modifierAccessed && unusedArguments.isEmpty()) {
-                // No warnings needed
+                // no warnings needed
                 assert !modifierIsSwitch || arguments.isEmpty();
                 continue;
             } else if (!modifierAccessed && modifierAddedAfterParsing) {
-                // No warnings needed
+                // no warnings needed
                 assert unusedArguments.isEmpty();
                 continue;
             }
@@ -116,7 +118,7 @@ public class ActionMessageListener extends MessageListener {
     @Override
     public boolean processMessage(MessageReceivedEvent event, ProcessingContext processingContext) {
         if (ConfirmationMessageListener.confirmationKeyExists(event.getChannel().getId(), event.getAuthor().getId())) {
-            // Waiting for confirmation
+            // waiting for confirmation
             ActionMessageListener.LOGGER.info("Message ignored because there is a pending confirmation");
             return false;
         }

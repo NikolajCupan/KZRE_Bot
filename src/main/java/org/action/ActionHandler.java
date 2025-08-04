@@ -6,16 +6,14 @@ import org.utility.Helper;
 import org.utility.ProcessingContext;
 import org.parsing.ChatCommand;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public abstract class ActionHandler {
-    protected static final Map<Enum<?>, Modifier<? extends Enum<?>, ? extends Number>> ACTION_MODIFIERS =
-            new HashMap<>();
+    protected static final Map<Enum<?>, Modifier<? extends Enum<?>, ? extends Number>> ACTION_MODIFIERS;
 
     static {
+        ACTION_MODIFIERS = new HashMap<>();
+
         ActionHandler.ACTION_MODIFIERS.put(
                 ActionHandler.GlobalActionModifier.VERBOSE,
                 new Modifier<>(Helper.EmptyEnum.class, null, false, false, false, true, null, null)
@@ -26,6 +24,7 @@ public abstract class ActionHandler {
         );
     }
 
+    public abstract boolean mentionsAllowed();
     public abstract void executeAction(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext);
     protected abstract Class<? extends Enum<?>> getModifierEnumClass();
 

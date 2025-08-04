@@ -42,6 +42,7 @@ public class QuoteTagDto {
         String sql = "SELECT * FROM " + QuoteTagDto.QUOTE_TAG_TABLE_NAME
                 + " WHERE " + QuoteTagDto.ID_TAG_COLUMN_NAME + " IN ("
                 + innerSql + ")";
+
         return session.createNativeQuery(sql, QuoteTagDto.class)
                 .setParameter("p_tags", tags)
                 .getResultList();
@@ -54,6 +55,10 @@ public class QuoteTagDto {
     protected record QuoteTagDtoPK(long idTag, long idQuote) {
         @Override
         public boolean equals(Object other) {
+            if (other == null) {
+                return false;
+            }
+
             if (other instanceof QuoteTagDtoPK(long otherIdTag, long otherIdQuote)) {
                 return this.idTag == otherIdTag && this.idQuote == otherIdQuote;
             }

@@ -5,81 +5,91 @@ import java.text.MessageFormat;
 import java.util.Collection;
 
 public class Check {
-    public static<T> boolean isEmpty(Collection<T> testedCollection, boolean throwIfFalse, String customValueName) {
+    public static<T> boolean isEmpty(Collection<T> testedCollection, boolean throwIfTestFails, String customValueName) {
         return Check.throwIfFalse(
-                Check.isEmpty(testedCollection), throwIfFalse, customValueName, "found: " + Helper.stringifyCollection(testedCollection), null
+                Check.isEmpty(testedCollection), throwIfTestFails, customValueName, "found: " + Helper.stringifyCollection(testedCollection), null
         );
     }
 
-    public static boolean isBooleanFalse(boolean testedValue, boolean throwIfFalse, String customValueName, String customMessage) {
+    public static boolean isBooleanTrue(boolean testedValue, boolean throwIfTestFails, String customValueName, String customMessage) {
         return Check.throwIfFalse(
-                Check.isBooleanFalse(testedValue), throwIfFalse, customValueName, "cannot be true", customMessage
+                Check.isBooleanTrue(testedValue), throwIfTestFails, customValueName, "cannot be false", customMessage
         );
     }
 
-    public static boolean isNotBlank(String testedValue, boolean throwIfFalse, String customValueName, String customMessage) {
+    public static boolean isBooleanFalse(boolean testedValue, boolean throwIfTestFails, String customValueName, String customMessage) {
         return Check.throwIfFalse(
-                Check.isNotBlank(testedValue), throwIfFalse, customValueName, "cannot be blank", customMessage
+                Check.isBooleanFalse(testedValue), throwIfTestFails, customValueName, "cannot be true", customMessage
+        );
+    }
+
+    public static boolean isNotBlank(String testedValue, boolean throwIfTestFails, String customValueName, String customMessage) {
+        return Check.throwIfFalse(
+                Check.isNotBlank(testedValue), throwIfTestFails, customValueName, "cannot be blank", customMessage
         );
     }
 
     public static<T extends Enum<?>, U extends Enum<?>> boolean enumeratorIsFromEnum(
-            U testedValue, Class<T> enumClass, boolean throwIfFalse, String customValueName, String customMessage
+            U testedValue, Class<T> enumClass, boolean throwIfTestFails, String customValueName, String customMessage
     ) {
         return Check.throwIfFalse(
-                Check.enumeratorIsFromEnum(testedValue, enumClass), throwIfFalse,
+                Check.enumeratorIsFromEnum(testedValue, enumClass), throwIfTestFails,
                 customValueName, "Enumerator is not from enum", customMessage
         );
     }
 
-    public static<T> boolean isWholeNumber(T testedValue, boolean throwIfFalse, String customValueName, String customMessage) {
+    public static<T> boolean isWholeNumber(T testedValue, boolean throwIfTestFails, String customValueName, String customMessage) {
         return Check.throwIfFalse(
-                Check.isWholeNumber(testedValue), throwIfFalse, customValueName, "is not a whole number", customMessage
+                Check.isWholeNumber(testedValue), throwIfTestFails, customValueName, "is not a whole number", customMessage
         );
     }
 
-    public static<T> boolean isDecimalNumber(T testedValue, boolean throwIfFalse, String customValueName, String customMessage) {
+    public static<T> boolean isDecimalNumber(T testedValue, boolean throwIfTestFails, String customValueName, String customMessage) {
         return Check.throwIfFalse(
-                Check.isDecimalNumber(testedValue), throwIfFalse, customValueName, "is not a decimal number", customMessage
+                Check.isDecimalNumber(testedValue), throwIfTestFails, customValueName, "is not a decimal number", customMessage
         );
     }
 
     public static<T extends Number, U extends Number> boolean isInRange(
-            T testedValue, U minInclusive, U maxInclusive, boolean throwIfFalse, String customValueName, String customMessage
+            T testedValue, U minInclusive, U maxInclusive, boolean throwIfTestFails, String customValueName, String customMessage
     ) {
         if (testedValue instanceof Byte || testedValue instanceof Short || testedValue instanceof Integer || testedValue instanceof Long) {
             return Check.throwIfFalse(
-                    Check.isLongInRange(testedValue, minInclusive.longValue(), maxInclusive.longValue()), throwIfFalse,
+                    Check.isLongInRange(testedValue, minInclusive.longValue(), maxInclusive.longValue()), throwIfTestFails,
                     customValueName, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), customMessage
             );
         } else {
             return Check.throwIfFalse(
-                    Check.isDoubleInRange(testedValue, minInclusive.doubleValue(), maxInclusive.doubleValue()), throwIfFalse,
+                    Check.isDoubleInRange(testedValue, minInclusive.doubleValue(), maxInclusive.doubleValue()), throwIfTestFails,
                     customValueName, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), customMessage
             );
         }
     }
 
     public static<T> boolean isLongInRange(
-            Object testedValue, T minInclusive, T maxInclusive, boolean throwIfFalse, String customValueName, String customMessage
+            Object testedValue, T minInclusive, T maxInclusive, boolean throwIfTestFails, String customValueName, String customMessage
     ) {
         return Check.throwIfFalse(
-                Check.isLongInRange(testedValue, minInclusive, maxInclusive), throwIfFalse,
+                Check.isLongInRange(testedValue, minInclusive, maxInclusive), throwIfTestFails,
                 customValueName, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), customMessage
         );
     }
 
     public static<T> boolean isDoubleInRange(
-            Object testedValue, T minInclusive, T maxInclusive, boolean throwIfFalse, String customValueName, String customMessage
+            Object testedValue, T minInclusive, T maxInclusive, boolean throwIfTestFails, String customValueName, String customMessage
     ) {
         return Check.throwIfFalse(
-                Check.isDoubleInRange(testedValue, minInclusive, maxInclusive), throwIfFalse,
+                Check.isDoubleInRange(testedValue, minInclusive, maxInclusive), throwIfTestFails,
                 customValueName, MessageFormat.format("is not in range <{0}; {1}>", minInclusive, maxInclusive), customMessage
         );
     }
 
     private static<T> boolean isEmpty(Collection<T> testedCollection) {
         return testedCollection.isEmpty();
+    }
+
+    private static boolean isBooleanTrue(boolean testedValue) {
+        return testedValue;
     }
 
     private static boolean isBooleanFalse(boolean testedValue) {
@@ -150,10 +160,10 @@ public class Check {
         return testedValueCasted >= minValueCasted && testedValueCasted <= maxValueCasted;
     }
 
-    private static boolean throwIfFalse(boolean testResult, boolean throwIfFalse, String customValueName, String defaultMessage, String customMessage) {
-        if (!testResult && throwIfFalse) {
-            String finalValueName = (customValueName != null && !customValueName.isBlank()) ? customValueName : "Value";
-            String finalMessage = (customMessage != null && !customMessage.isBlank()) ? customMessage : defaultMessage;
+    private static boolean throwIfFalse(boolean testResult, boolean throwIfTestFails, String customValueName, String defaultMessage, String customMessage) {
+        if (!testResult && throwIfTestFails) {
+            String finalValueName = (customValueName != null) ? customValueName : "Value";
+            String finalMessage = (customMessage != null) ? customMessage : defaultMessage;
 
             throw new InvalidActionArgumentException(finalValueName + " " + finalMessage);
         }

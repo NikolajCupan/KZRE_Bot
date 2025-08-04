@@ -51,7 +51,7 @@ public class Quote extends ActionHandler {
         if (chatCount.getType() == TypedValue.Type.WHOLE_NUMBER) {
             resultsCount = Long.parseLong(chatCount.getUsedValue());
         } else {
-            ProcessingContext dummy = new ProcessingContext();
+            final ProcessingContext dummy = new ProcessingContext();
             assert chatCommand.getFirstArgumentAsEnum(Quote.ActionModifier.COUNT, Quote.CountArgument.class, true, dummy) == Quote.CountArgument.ALL;
             assert chatCount.getType() == TypedValue.Type.ENUMERATOR;
 
@@ -81,6 +81,11 @@ public class Quote extends ActionHandler {
     }
 
     @Override
+    public boolean mentionsAllowed() {
+        return false;
+    }
+
+    @Override
     public void executeAction(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         try {
             Quote.TypeArgument typeArgument = chatCommand.getFirstArgumentAsEnum(Quote.ActionModifier.TYPE, Quote.TypeArgument.class, true, processingContext);
@@ -103,7 +108,7 @@ public class Quote extends ActionHandler {
 
     private void handleGetQuote(MessageReceivedEvent event, ChatCommand chatCommand, ProcessingContext processingContext) {
         Quote.OrderArgument chatOrder = chatCommand.getFirstArgumentAsEnum(Quote.ActionModifier.ORDER, Quote.OrderArgument.class, true, processingContext);
-        ProcessingContext dummy = new ProcessingContext();
+        final ProcessingContext dummy = new ProcessingContext();
         Set<String> chatTags = chatCommand.getArguments(Quote.ActionModifier.TAG, true, true, dummy).stream()
                 .map(argument -> argument.getTrimmedNormalizedLowercaseUsedValue(processingContext, "tag"))
                 .collect(Collectors.toSet());

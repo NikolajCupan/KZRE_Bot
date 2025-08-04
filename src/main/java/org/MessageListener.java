@@ -17,7 +17,7 @@ import java.awt.*;
 import java.util.List;
 
 public abstract class MessageListener extends ListenerAdapter {
-    protected static void returnResponse(MessageChannel channel, String result) {
+    public static void returnResponse(MessageChannel channel, String result) {
         if (result != null && !result.isBlank()) {
             channel.sendMessage(result).queue();
         }

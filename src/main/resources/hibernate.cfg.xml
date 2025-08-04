@@ -15,5 +15,9 @@
         <mapping class="org.database.dto.TagDto"/>
         <mapping class="org.database.dto.QuoteDto"/>
         <mapping class="org.database.dto.QuoteTagDto"/>
+        <mapping class="org.database.dto.MessageDto"/>
+        <mapping class="org.database.dto.EmojiDto"/>
+        <mapping class="org.database.dto.GuildEmojiDto"/>
+        <mapping class="org.database.dto.ReactionDto"/>
     </session-factory>
 </hibernate-configuration>
